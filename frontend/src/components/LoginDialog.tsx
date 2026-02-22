@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { SignupDialog } from "./SignupDialog";
+import { ForgotPasswordDialog } from "./ForgotPasswordDialog";
 import { Eye, EyeOff } from "lucide-react";
 
 interface LoginDialogProps {
@@ -15,6 +16,7 @@ interface LoginDialogProps {
 
 export const LoginDialog = ({ open, onOpenChange }: LoginDialogProps) => {
   const [showSignup, setShowSignup] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -70,10 +72,8 @@ export const LoginDialog = ({ open, onOpenChange }: LoginDialogProps) => {
                 <button
                   type="button"
                   onClick={() => {
-                    toast({
-                      title: "Password Reset",
-                      description: "Please contact admin to reset your password.",
-                    });
+                    onOpenChange(false);
+                    setShowForgotPassword(true);
                   }}
                   className="text-xs text-primary hover:underline"
                 >
@@ -125,6 +125,11 @@ export const LoginDialog = ({ open, onOpenChange }: LoginDialogProps) => {
           setShowSignup(false);
           onOpenChange(true);
         }}
+      />
+
+      <ForgotPasswordDialog
+        open={showForgotPassword}
+        onOpenChange={setShowForgotPassword}
       />
     </>
   );

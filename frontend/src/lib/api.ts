@@ -184,3 +184,32 @@ export const registrationsApi = {
     return res.json();
   }
 };
+
+// Auth API
+export const authApi = {
+  forgotPassword: async (email: string) => {
+    const res = await fetch(`${API_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to send reset email');
+    }
+    return res.json();
+  },
+
+  resetPassword: async (token: string, password: string) => {
+    const res = await fetch(`${API_URL}/auth/reset-password/${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to reset password');
+    }
+    return res.json();
+  }
+};

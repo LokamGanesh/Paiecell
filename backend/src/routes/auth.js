@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User.js';
 import { auth } from '../middleware/auth.js';
 
@@ -136,5 +137,81 @@ router.get('/me', auth, async (req, res) => {
     }
   });
 });
+
+// Forgot password - request reset
+router.post('/forgot-password',
+  [body('email').isEmail().normalizeEmail()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const { email } = req.body;
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        // Don't reveal if user exists
+        return res.json({ message: 'If an account exists, a reset link has been sent to your email.' });
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+      user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+      await user.save();
+
+      // In production, send email here
+      // For now, return the token (in production, this should be sent via email)
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
+      
+      console.log('Password reset URL:', resetUrl);
+      
+      res.json({ 
+        message: 'If an account exists, a reset link has been sent to your email.',
+        // Remove this in production - only for development
+        resetUrl: process.env.NODE_ENV === 'development' ? resetUrl : undefined
+      });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+);
+
+// Reset password
+router.post('/reset-password/:token',
+  [body('password').isLength({ min: 6 })],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+      
+      const user = await User.findOne({
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { $gt: Date.now() }
+      });
+
+      if (!user) {
+        return res.status(400).json({ error: 'Invalid or expired reset token' });
+      }
+
+      user.password = req.body.password;
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+
+      res.json({ message: 'Password has been reset successfully' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+);
 
 export default router;
