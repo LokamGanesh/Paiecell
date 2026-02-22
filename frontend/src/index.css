@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Space+Grotesk:wght@300..700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 185 30% 96%;
+    --foreground: 190 40% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 190 40% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 190 40% 10%;
+
+    --primary: 174 72% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 185 25% 91%;
+    --secondary-foreground: 190 40% 10%;
+
+    --muted: 185 20% 93%;
+    --muted-foreground: 190 15% 42%;
+
+    --accent: 42 85% 52%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 185 20% 87%;
+    --input: 185 20% 87%;
+    --ring: 174 72% 40%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 190 45% 10%;
+    --sidebar-foreground: 174 60% 80%;
+    --sidebar-primary: 174 72% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 190 40% 16%;
+    --sidebar-accent-foreground: 174 60% 80%;
+    --sidebar-border: 190 35% 18%;
+    --sidebar-ring: 174 72% 45%;
+
+    /* Custom tokens */
+    --hero-gradient: linear-gradient(135deg, hsl(174 72% 40%), hsl(42 85% 52%));
+    --card-shadow: 0 4px 24px -4px hsl(174 72% 40% / 0.1);
+    --card-hover-shadow: 0 8px 32px -4px hsl(174 72% 40% / 0.18);
+    --nav-blur: blur(12px);
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
+
+    /* Category colors */
+    --cat-yesplus: 174 72% 40%;
+    --cat-sahaj: 200 70% 50%;
+    --cat-dsn: 42 85% 52%;
+    --cat-advance: 150 50% 40%;
+    --cat-fun: 340 65% 55%;
+    --cat-corporate: 190 40% 25%;
+  }
+
+  .dark {
+    --background: 190 45% 7%;
+    --foreground: 174 60% 90%;
+
+    --card: 190 40% 11%;
+    --card-foreground: 174 60% 90%;
+
+    --popover: 190 40% 11%;
+    --popover-foreground: 174 60% 90%;
+
+    --primary: 174 72% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 190 35% 15%;
+    --secondary-foreground: 174 60% 90%;
+
+    --muted: 190 30% 14%;
+    --muted-foreground: 190 20% 55%;
+
+    --accent: 42 85% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 190 30% 18%;
+    --input: 190 30% 18%;
+    --ring: 174 72% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--hero-gradient);
+  }
+
+  .bg-hero-gradient {
+    background-image: var(--hero-gradient);
+  }
+
+  .card-shadow {
+    box-shadow: var(--card-shadow);
+  }
+
+  .card-hover-shadow {
+    box-shadow: var(--card-hover-shadow);
+  }
+
+  .nav-blur {
+    backdrop-filter: var(--nav-blur);
+  }
+}
