@@ -40,7 +40,10 @@ interface Event {
   description: string;
   category: string;
   date: string;
+  endDate?: string;
+  duration: number;
   time: string;
+  endTime?: string;
   venue: string;
   image?: string;
   capacity: number;
@@ -64,7 +67,10 @@ export const EventManagement = () => {
     description: "",
     category: "Workshop",
     date: "",
+    endDate: "",
+    duration: 1,
     time: "",
+    endTime: "",
     venue: "",
     image: "",
     capacity: 0,
@@ -98,7 +104,10 @@ export const EventManagement = () => {
       description: "",
       category: "Workshop",
       date: "",
+      endDate: "",
+      duration: 1,
       time: "",
+      endTime: "",
       venue: "",
       image: "",
       capacity: 0,
@@ -173,7 +182,10 @@ export const EventManagement = () => {
         description: event.description,
         category: event.category,
         date: event.date.split('T')[0],
+        endDate: event.endDate ? event.endDate.split('T')[0] : "",
+        duration: event.duration || 1,
         time: event.time,
+        endTime: event.endTime || "",
         venue: event.venue,
         image: event.image || "",
         capacity: event.capacity,
@@ -471,7 +483,7 @@ export const EventManagement = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="date">Date *</Label>
+                <Label htmlFor="date">Start Date *</Label>
                 <Input
                   id="date"
                   type="date"
@@ -482,13 +494,49 @@ export const EventManagement = () => {
               </div>
 
               <div>
-                <Label htmlFor="time">Time *</Label>
+                <Label htmlFor="endDate">End Date (Optional)</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={form.endDate}
+                  onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                  min={form.date}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Leave empty for single-day event</p>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="duration">Duration (Days)</Label>
+              <Input
+                id="duration"
+                type="number"
+                min="1"
+                value={form.duration}
+                onChange={(e) => setForm({ ...form, duration: parseInt(e.target.value) || 1 })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Number of days the event will run</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="time">Start Time *</Label>
                 <Input
                   id="time"
                   type="time"
                   value={form.time}
                   onChange={(e) => setForm({ ...form, time: e.target.value })}
                   required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="endTime">End Time (Optional)</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={form.endTime}
+                  onChange={(e) => setForm({ ...form, endTime: e.target.value })}
                 />
               </div>
             </div>

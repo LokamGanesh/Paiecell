@@ -18,6 +18,41 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const EventCard = ({ event }: { event: any }) => {
   const isPast = new Date(event.date) < new Date();
+  const isMultiDay = event.endDate && event.endDate !== event.date;
+  
+  const formatDateRange = () => {
+    const startDate = new Date(event.date);
+    const endDate = event.endDate ? new Date(event.endDate) : null;
+    
+    if (!endDate || !isMultiDay) {
+      return startDate.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+    
+    // Multi-day event
+    const startStr = startDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    const endStr = endDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    
+    return `${startStr} - ${endStr}`;
+  };
+
+  const formatTimeRange = () => {
+    if (event.endTime) {
+      return `${event.time} - ${event.endTime}`;
+    }
+    return event.time;
+  };
 
   return (
     <div className="group rounded-xl border border-border bg-card card-shadow hover:card-hover-shadow transition-all duration-300 overflow-hidden flex flex-col">
@@ -53,13 +88,17 @@ const EventCard = ({ event }: { event: any }) => {
         <div className="flex flex-col gap-1.5 mb-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-primary" />
-            {new Date(event.date).toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
-            {event.time && ` • ${event.time}`}
+            <div>
+              <div>{formatDateRange()}</div>
+              {isMultiDay && event.duration && (
+                <div className="text-xs text-muted-foreground">
+                  {event.duration} {event.duration === 1 ? 'day' : 'days'}
+                </div>
+              )}
+              {event.time && (
+                <div className="text-xs">{formatTimeRange()}</div>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-primary" />
