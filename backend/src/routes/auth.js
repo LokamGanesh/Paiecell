@@ -64,11 +64,19 @@ router.post('/register',
       // Initiate PhonePe payment with temporary data
       const paymentResponse = await initiatePayment(tempUserData, 100);
 
+      // Extract payment URL from response
+      const paymentUrl = paymentResponse.data?.data?.instrumentResponse?.redirectUrl;
+      
+      if (!paymentUrl) {
+        console.error('Payment URL not found in response:', paymentResponse.data);
+        return res.status(500).json({ error: 'Failed to get payment URL. Please try again.' });
+      }
+
       // Return payment URL without creating user in DB
       res.status(200).json({
         success: true,
         message: 'Payment gateway initiated. Complete payment to register.',
-        paymentUrl: paymentResponse.data.data.instrumentResponse.redirectUrl,
+        paymentUrl,
         merchantTransactionId: paymentResponse.merchantTransactionId,
         userData: tempUserData
       });

@@ -21,12 +21,17 @@ const generateChecksum = (payload, saltKey) => {
 
 export const initiatePayment = async (userData, amount = 100) => {
   try {
+    if (!MERCHANT_ID || !SALT_KEY) {
+      throw new Error('PhonePe credentials not configured. Please check your environment variables.');
+    }
+
     const merchantTransactionId = `PAIE_${Date.now()}_${userData.email.split('@')[0]}`;
+    const merchantUserId = userData._id ? userData._id.toString() : userData.email;
     
     const payload = {
       merchantId: MERCHANT_ID,
       merchantTransactionId,
-      merchantUserId: userData._id.toString(),
+      merchantUserId,
       amount: amount * 100, // Convert to paise
       redirectUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-callback?transactionId=${merchantTransactionId}`,
       redirectMode: 'REDIRECT',
@@ -38,6 +43,9 @@ export const initiatePayment = async (userData, amount = 100) => {
     };
 
     const checksum = generateChecksum(payload, SALT_KEY);
+    
+    console.log('Initiating PhonePe payment with URL:', PHONEPE_HOST_URL);
+    console.log('Merchant ID:', MERCHANT_ID);
     
     const response = await axios.post(
       `${PHONEPE_HOST_URL}/pg/v1/pay`,
@@ -52,14 +60,16 @@ export const initiatePayment = async (userData, amount = 100) => {
       }
     );
 
+    console.log('PhonePe response:', response.data);
+
     return {
       success: true,
       data: response.data,
       merchantTransactionId
     };
   } catch (error) {
-    console.error('PhonePe payment initiation error:', error);
-    throw new Error(`Failed to initiate payment: ${error.message}`);
+    console.error('PhonePe payment initiation error:', error.response?.data || error.message);
+    throw new Error(`Failed to initiate payment: ${error.response?.data?.message || error.message}`);
   }
 };
 
