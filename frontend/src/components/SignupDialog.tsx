@@ -39,7 +39,7 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
     confirmPassword: "",
     phone: "",
     college: "SRKR Engineering College",
-    Department: "",
+    department: "",
     year: "",
   });
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

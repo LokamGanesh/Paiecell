@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Calendar, Users, FileDown, Mail, ExternalLink, LogOut, Menu, X, UserCog, BookOpen, Settings, Image } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, FileDown, Mail, ExternalLink, LogOut, Menu, X, UserCog, BookOpen, Settings, Image, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserManagement } from "@/components/UserManagement";
 import { EventManagement } from "@/components/EventManagement";
 import { CourseManagement } from "@/components/CourseManagement";
 import { MediaManagement } from "@/components/MediaManagement";
+import { Analytics } from "@/components/Analytics";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { useAuth } from "@/contexts/AuthContext";
 
 const NAV = [
   { label: "Dashboard", icon: LayoutDashboard, id: "dashboard" },
+  { label: "Analytics", icon: BarChart3, id: "analytics" },
   { label: "Events", icon: Calendar, id: "events" },
   { label: "Courses", icon: BookOpen, id: "courses" },
   { label: "Media", icon: Image, id: "media" },
@@ -32,6 +34,7 @@ const Admin = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [registrations, setRegistrations] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
@@ -43,14 +46,15 @@ const Admin = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const [eventsRes, usersRes, registrationsRes] = await Promise.all([
+        const [eventsRes, usersRes, registrationsRes, coursesRes] = await Promise.all([
           fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/events`),
           fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/users`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
           }),
           fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/registrations`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          })
+          }),
+          fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/courses`)
         ]);
         
         if (eventsRes.ok) {
@@ -66,6 +70,11 @@ const Admin = () => {
         if (registrationsRes.ok) {
           const registrationsData = await registrationsRes.json();
           setRegistrations(registrationsData.registrations || []);
+        }
+
+        if (coursesRes.ok) {
+          const coursesData = await coursesRes.json();
+          // Store courses in a state variable if needed
         }
       } catch (error) {
         console.error('Failed to fetch stats:', error);
@@ -182,6 +191,16 @@ const Admin = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === "analytics" && (
+            <Analytics 
+              events={events} 
+              courses={courses} 
+              users={users} 
+              registrations={registrations} 
+              loading={statsLoading}
+            />
           )}
 
           {activeTab === "events" && <EventManagement />}
