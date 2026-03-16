@@ -68,4 +68,10 @@ const courseSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Add indexes for faster queries
+courseSchema.index({ createdBy: 1 });
+courseSchema.index({ status: 1 });
+courseSchema.index({ category: 1 });
+courseSchema.index({ createdAt: -1 });
+
 export default mongoose.model('Course', courseSchema);

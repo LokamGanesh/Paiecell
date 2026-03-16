@@ -4,11 +4,16 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/User.js';
 import { auth } from '../middleware/auth.js';
+import { sendEmail } from '../utils/emailService.js';
 
 const router = express.Router();
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+};
+
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 // Register (Student only - public registration)
@@ -138,7 +143,7 @@ router.get('/me', auth, async (req, res) => {
   });
 });
 
-// Forgot password - request reset
+// Forgot password - request OTP
 router.post('/forgot-password',
   [body('email').isEmail().normalizeEmail()],
   async (req, res) => {
@@ -152,26 +157,44 @@ router.post('/forgot-password',
       const user = await User.findOne({ email });
 
       if (!user) {
-        // Don't reveal if user exists
-        return res.json({ message: 'If an account exists, a reset link has been sent to your email.' });
+        return res.status(404).json({ error: 'Email not found. Please check and try again.' });
       }
 
-      // Generate reset token
-      const resetToken = crypto.randomBytes(32).toString('hex');
-      user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-      user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+      // Generate OTP
+      const otp = generateOTP();
+      user.otp = otp;
+      user.otpExpires = Date.now() + 600000; // 10 minutes
+      user.otpAttempts = 0;
       await user.save();
 
-      // In production, send email here
-      // For now, return the token (in production, this should be sent via email)
-      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
-      
-      console.log('Password reset URL:', resetUrl);
-      
+      // Send OTP via email
+      const emailTemplate = `
+        <h2>Password Reset OTP</h2>
+        <p>Hi ${user.name},</p>
+        <p>Your OTP for password reset is:</p>
+        <h1 style="color: #007bff; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+        <p>This OTP will expire in 10 minutes.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+        <p>Best regards,<br/>PAIE Cell</p>
+      `;
+
+      try {
+        await sendEmail(email, 'Password Reset OTP', emailTemplate);
+        console.log(`OTP sent successfully to ${email}`);
+      } catch (emailError) {
+        console.error('Failed to send OTP email:', emailError);
+        // In development, still return success but log the OTP
+        if (process.env.NODE_ENV === 'development') {
+          console.log('OTP for development:', otp);
+        } else {
+          return res.status(500).json({ error: 'Failed to send OTP. Please try again.' });
+        }
+      }
+
       res.json({ 
-        message: 'If an account exists, a reset link has been sent to your email.',
-        // Remove this in production - only for development
-        resetUrl: process.env.NODE_ENV === 'development' ? resetUrl : undefined
+        message: 'OTP has been sent to your email.',
+        // Only for development
+        otp: process.env.NODE_ENV === 'development' ? otp : undefined
       });
     } catch (error) {
       console.error('Forgot password error:', error);
@@ -180,7 +203,64 @@ router.post('/forgot-password',
   }
 );
 
-// Reset password
+// Verify OTP
+router.post('/verify-otp',
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('otp').isLength({ min: 6, max: 6 })
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const { email, otp } = req.body;
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        return res.status(400).json({ error: 'User not found' });
+      }
+
+      // Check if OTP is expired
+      if (!user.otpExpires || Date.now() > user.otpExpires) {
+        return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+      }
+
+      // Check attempts
+      if (user.otpAttempts >= 5) {
+        return res.status(400).json({ error: 'Too many failed attempts. Please request a new OTP.' });
+      }
+
+      // Verify OTP
+      if (user.otp !== otp) {
+        user.otpAttempts += 1;
+        await user.save();
+        return res.status(400).json({ error: 'Invalid OTP' });
+      }
+
+      // OTP verified - generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+      user.resetPasswordExpires = Date.now() + 1800000; // 30 minutes
+      user.otp = undefined;
+      user.otpExpires = undefined;
+      user.otpAttempts = 0;
+      await user.save();
+
+      res.json({ 
+        message: 'OTP verified successfully',
+        resetToken
+      });
+    } catch (error) {
+      console.error('Verify OTP error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+);
+
+// Reset password with token
 router.post('/reset-password/:token',
   [body('password').isLength({ min: 6 })],
   async (req, res) => {
@@ -209,6 +289,64 @@ router.post('/reset-password/:token',
       res.json({ message: 'Password has been reset successfully' });
     } catch (error) {
       console.error('Reset password error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+);
+
+// Resend OTP
+router.post('/resend-otp',
+  [body('email').isEmail().normalizeEmail()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const { email } = req.body;
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        return res.status(404).json({ error: 'Email not found. Please check and try again.' });
+      }
+
+      // Generate new OTP
+      const otp = generateOTP();
+      user.otp = otp;
+      user.otpExpires = Date.now() + 600000; // 10 minutes
+      user.otpAttempts = 0;
+      await user.save();
+
+      // Send OTP via email
+      const emailTemplate = `
+        <h2>Password Reset OTP</h2>
+        <p>Hi ${user.name},</p>
+        <p>Your new OTP for password reset is:</p>
+        <h1 style="color: #007bff; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+        <p>This OTP will expire in 10 minutes.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+        <p>Best regards,<br/>PAIE Cell</p>
+      `;
+
+      try {
+        await sendEmail(email, 'Password Reset OTP', emailTemplate);
+        console.log(`OTP resent successfully to ${email}`);
+      } catch (emailError) {
+        console.error('Failed to send OTP email:', emailError);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('OTP for development:', otp);
+        } else {
+          return res.status(500).json({ error: 'Failed to send OTP. Please try again.' });
+        }
+      }
+
+      res.json({ 
+        message: 'A new OTP has been sent to your email.',
+        otp: process.env.NODE_ENV === 'development' ? otp : undefined
+      });
+    } catch (error) {
+      console.error('Resend OTP error:', error);
       res.status(500).json({ error: 'Server error' });
     }
   }

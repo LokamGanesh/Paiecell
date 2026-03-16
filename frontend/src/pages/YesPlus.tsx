@@ -1,9 +1,14 @@
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight, ExternalLink, Loader } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { useSettings } from "@/contexts/SettingsContext";
 
 const YesPlus = () => {
+  const { yesPlusSettings, loading } = useSettings();
+
+  const registrationLink = yesPlusSettings?.link || 'https://asplace.artofliving.org/register';
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -38,15 +43,22 @@ const YesPlus = () => {
             <p className="text-primary-foreground/80 mb-6">
               Register through the official ASPLACE portal. Your registration is tracked by PAIE Cell for campus coordination.
             </p>
-            <a
-              href="https://asplace.artofliving.org/register?utm_source=paie&utm_medium=website&utm_campaign=campus"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button size="lg" variant="secondary" className="gap-2 text-base">
-                Register on ASPLACE <ExternalLink className="h-4 w-4" />
-              </Button>
-            </a>
+            {loading ? (
+              <div className="flex items-center justify-center gap-2">
+                <Loader className="h-4 w-4 animate-spin" />
+                <span className="text-primary-foreground">Loading registration link...</span>
+              </div>
+            ) : (
+              <a
+                href={registrationLink}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button size="lg" variant="secondary" className="gap-2 text-base">
+                  Register on ASPLACE <ExternalLink className="h-4 w-4" />
+                </Button>
+              </a>
+            )}
             <p className="text-xs text-primary-foreground/60 mt-4">
               * Registration opens in a new window. UTM tracking helps us coordinate campus activities.
             </p>

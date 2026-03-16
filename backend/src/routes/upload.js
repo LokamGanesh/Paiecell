@@ -64,6 +64,24 @@ router.post('/image', auth, adminAuth, upload.single('image'), (req, res) => {
   }
 });
 
+// Upload media (image or video)
+router.post('/media', auth, adminAuth, upload.single('media'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const mediaUrl = `/uploads/${req.file.filename}`;
+    res.json({ 
+      message: 'Media uploaded successfully',
+      mediaUrl: mediaUrl,
+      filename: req.file.filename
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to upload media' });
+  }
+});
+
 // Delete image
 router.delete('/image/:filename', auth, adminAuth, (req, res) => {
   try {

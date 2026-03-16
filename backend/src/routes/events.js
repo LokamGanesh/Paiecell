@@ -5,13 +5,32 @@ import { auth, adminAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Get all events (public)
+// Get all events (public) with pagination
 router.get('/', async (req, res) => {
   try {
-    const events = await Event.find()
-      .populate('createdBy', 'name email')
-      .sort({ date: 1 });
-    res.json({ events });
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const skip = (page - 1) * limit;
+
+    const [events, total] = await Promise.all([
+      Event.find()
+        .select('title description category date time venue image capacity registrationCount status')
+        .sort({ date: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Event.countDocuments()
+    ]);
+
+    res.json({ 
+      events,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
   }

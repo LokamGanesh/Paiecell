@@ -32,42 +32,7 @@ router.post('/',
         return res.status(400).json({ error: 'Course ID is required' });
       }
 
-      // Check if event/course exists
-      if (type === 'event') {
-        const event = await Event.findById(eventId);
-        if (!event) {
-          return res.status(404).json({ error: 'Event not found' });
-        }
-
-        // Check capacity
-        if (event.capacity > 0) {
-          const registrationCount = await Registration.countDocuments({ 
-            event: eventId, 
-            status: { $ne: 'cancelled' } 
-          });
-          if (registrationCount >= event.capacity) {
-            return res.status(400).json({ error: 'Event is full' });
-          }
-        }
-      } else {
-        const course = await Course.findById(courseId);
-        if (!course) {
-          return res.status(404).json({ error: 'Course not found' });
-        }
-
-        // Check capacity
-        if (course.capacity > 0) {
-          const registrationCount = await Registration.countDocuments({ 
-            course: courseId, 
-            status: { $ne: 'cancelled' } 
-          });
-          if (registrationCount >= course.capacity) {
-            return res.status(400).json({ error: 'Course is full' });
-          }
-        }
-      }
-
-      // Check if already registered
+      // Check if already registered (do this first to fail fast)
       const existingRegistration = await Registration.findOne({
         user: req.user._id,
         ...(type === 'event' ? { event: eventId } : { course: courseId })
@@ -75,6 +40,39 @@ router.post('/',
 
       if (existingRegistration) {
         return res.status(400).json({ error: 'Already registered' });
+      }
+
+      // Use aggregation for capacity check and event/course fetch in one query
+      if (type === 'event') {
+        const eventData = await Event.findById(eventId).select('capacity');
+        if (!eventData) {
+          return res.status(404).json({ error: 'Event not found' });
+        }
+
+        if (eventData.capacity > 0) {
+          const registrationCount = await Registration.countDocuments({ 
+            event: eventId, 
+            status: { $ne: 'cancelled' } 
+          });
+          if (registrationCount >= eventData.capacity) {
+            return res.status(400).json({ error: 'Event is full' });
+          }
+        }
+      } else {
+        const courseData = await Course.findById(courseId).select('capacity');
+        if (!courseData) {
+          return res.status(404).json({ error: 'Course not found' });
+        }
+
+        if (courseData.capacity > 0) {
+          const registrationCount = await Registration.countDocuments({ 
+            course: courseId, 
+            status: { $ne: 'cancelled' } 
+          });
+          if (registrationCount >= courseData.capacity) {
+            return res.status(400).json({ error: 'Course is full' });
+          }
+        }
       }
 
       // Create registration with user snapshot
@@ -103,6 +101,7 @@ router.post('/',
         });
       }
 
+      // Populate only necessary fields
       await registration.populate([
         { path: 'user', select: 'name email phone' },
         { path: 'event', select: 'title date venue' },

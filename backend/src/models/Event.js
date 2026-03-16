@@ -75,4 +75,11 @@ const eventSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Add indexes for faster queries
+eventSchema.index({ date: 1 });
+eventSchema.index({ createdBy: 1 });
+eventSchema.index({ status: 1 });
+eventSchema.index({ category: 1 });
+eventSchema.index({ date: 1, status: 1 });
+
 export default mongoose.model('Event', eventSchema);

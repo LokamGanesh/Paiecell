@@ -53,10 +53,21 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  otp: String,
+  otpExpires: Date,
+  otpAttempts: {
+    type: Number,
+    default: 0
+  }
 }, {
   timestamps: true
 });
+
+// Add indexes for faster queries
+userSchema.index({ email: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ createdAt: -1 });
 
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();

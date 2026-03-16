@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import EventCard from "@/components/EventCard";
 import { useState, useEffect } from "react";
 import { eventsApi } from "@/lib/api";
+import { useSettings } from "@/contexts/SettingsContext";
 
 const stats = [
   { icon: Users, label: "Students Empowered", value: "2,000+" },
@@ -16,6 +17,9 @@ const stats = [
 const Index = () => {
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { yesPlusSettings } = useSettings();
+
+  const yesPlusLink = yesPlusSettings?.link || 'https://asplace.artofliving.org/register';
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -57,7 +61,7 @@ const Index = () => {
                 Explore Events <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <a href="https://www.artofliving.org/yes-plus" target="_blank" rel="noopener noreferrer">
+            <a href={yesPlusLink} target="_blank" rel="noopener noreferrer">
               <Button size="lg" variant="outline" className="gap-2 text-base px-8">
                 Register for YES+
               </Button>
@@ -125,7 +129,7 @@ const Index = () => {
           <p className="text-primary-foreground/90 max-w-xl mx-auto mb-6 text-lg">
             Join the internationally acclaimed Youth Empowerment & Skills program by The Art of Living.
           </p>
-          <a href="https://www.artofliving.org/yes-plus" target="_blank" rel="noopener noreferrer">
+          <a href={yesPlusLink} target="_blank" rel="noopener noreferrer">
             <Button size="lg" variant="secondary" className="gap-2 text-base">
               Register for YES+ <ArrowRight className="h-4 w-4" />
             </Button>

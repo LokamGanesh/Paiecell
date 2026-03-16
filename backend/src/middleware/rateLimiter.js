@@ -45,7 +45,7 @@ export const rateLimiter = (maxRequests = 100, windowMs = 60000) => {
 };
 
 // Stricter rate limit for auth endpoints
-export const authRateLimiter = rateLimiter(10, 60000); // 10 requests per minute
+export const authRateLimiter = rateLimiter(30, 60000); // 30 requests per minute
 
 // Standard rate limit for API endpoints
 export const apiRateLimiter = rateLimiter(100, 60000); // 100 requests per minute

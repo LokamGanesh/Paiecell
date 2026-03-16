@@ -12,6 +12,9 @@ import coursesRoutes from './routes/courses.js';
 import uploadRoutes from './routes/upload.js';
 import registrationsRoutes from './routes/registrations.js';
 import mediaRoutes from './routes/media.js';
+import exportRoutes from './routes/export.js';
+import settingsRoutes from './routes/settings.js';
+import emailRoutes from './routes/email.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +53,9 @@ app.use('/api/courses', apiRateLimiter, coursesRoutes);
 app.use('/api/upload', apiRateLimiter, uploadRoutes);
 app.use('/api/registrations', apiRateLimiter, registrationsRoutes);
 app.use('/api/media', apiRateLimiter, mediaRoutes);
+app.use('/api/export', apiRateLimiter, exportRoutes);
+app.use('/api/settings', apiRateLimiter, settingsRoutes);
+app.use('/api/email', apiRateLimiter, emailRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running', timestamp: new Date().toISOString() });

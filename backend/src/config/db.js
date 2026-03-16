@@ -4,6 +4,11 @@ export const connectDB = async (retries = 5) => {
   const options = {
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
+    maxPoolSize: 20,
+    minPoolSize: 5,
+    maxIdleTimeMS: 30000,
+    retryWrites: true,
+    w: 'majority'
   };
 
   for (let i = 0; i < retries; i++) {
