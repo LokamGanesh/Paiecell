@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 interface SignupDialogProps {
   open: boolean;
@@ -26,8 +26,9 @@ interface SignupDialogProps {
   onSwitchToLogin?: () => void;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDialogProps) => {
-  const { register } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -62,13 +63,35 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
 
     setLoading(true);
     try {
-      await register({
-        ...form,
-        role: "student",
-        userType: "student",
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          role: "student",
+          userType: "student",
+        })
       });
-      toast({ title: "Account created successfully!" });
-      onOpenChange(false);
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      // Store user data temporarily for payment callback
+      sessionStorage.setItem('pendingUserId', data.userId);
+      sessionStorage.setItem('pendingUserData', JSON.stringify(data));
+
+      toast({
+        title: "Redirecting to Payment",
+        description: "You will be redirected to PhonePe payment gateway",
+      });
+
+      // Redirect to PhonePe payment URL
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      }
     } catch (error: any) {
       toast({
         title: "Registration failed",
@@ -86,7 +109,7 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
         <DialogHeader>
           <DialogTitle>Create Student Account</DialogTitle>
           <DialogDescription>
-            Fill in your details to register as a student
+            Fill in your details to register as a student. A registration fee of ₹100 will be charged.
           </DialogDescription>
         </DialogHeader>
 
@@ -99,6 +122,7 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Your full name"
               required
+              disabled={loading}
             />
           </div>
           <div>
@@ -110,18 +134,28 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="you@example.com"
               required
+              disabled={loading}
             />
           </div>
           <div>
             <Label htmlFor="phone">Phone Number *</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="+91 XXXXX XXXXX"
-              required
-            />
+            <div className="flex items-center">
+              <span className="text-gray-600 mr-2">+91</span>
+              <Input
+                id="phone"
+                type="tel"
+                value={form.phone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setForm({ ...form, phone: value });
+                }}
+                placeholder="XXXXX XXXXX"
+                maxLength={10}
+                required
+                disabled={loading}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">10-digit mobile number</p>
           </div>
           <div>
             <Label htmlFor="password">Password *</Label>
@@ -133,12 +167,14 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 placeholder="Min. 6 characters"
                 required
+                disabled={loading}
                 className="pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                disabled={loading}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -154,12 +190,14 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
                 onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
                 placeholder="Re-enter your password"
                 required
+                disabled={loading}
                 className="pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                disabled={loading}
               >
                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -173,6 +211,7 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
               onChange={(e) => setForm({ ...form, college: e.target.value })}
               placeholder="Your college name"
               required
+              disabled={loading}
             />
           </div>
           <div>
@@ -180,7 +219,7 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
             <Select
               value={form.department}
               onValueChange={(v) => setForm({ ...form, department: v })}
-              required
+              disabled={loading}
             >
               <SelectTrigger id="department">
                 <SelectValue placeholder="Select Branch" />
@@ -206,7 +245,7 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
             <Select
               value={form.year}
               onValueChange={(v) => setForm({ ...form, year: v })}
-              required
+              disabled={loading}
             >
               <SelectTrigger id="year">
                 <SelectValue placeholder="Select year" />
@@ -219,8 +258,22 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
               </SelectContent>
             </Select>
           </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              <strong>Registration Fee:</strong> ₹100 (One-time payment via PhonePe)
+            </p>
+          </div>
+
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating Account..." : "Create Account"}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              "Create Account & Pay ₹100"
+            )}
           </Button>
         </form>
 
@@ -232,6 +285,7 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
               if (onSwitchToLogin) onSwitchToLogin();
             }}
             className="text-primary hover:underline"
+            disabled={loading}
           >
             Already have an account? Login
           </button>

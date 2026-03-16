@@ -16,6 +16,7 @@ import Admin from "./pages/Admin";
 import StudentDashboard from "./pages/StudentDashboard";
 import FacilitatorDashboard from "./pages/FacilitatorDashboard";
 import ResetPassword from "./pages/ResetPassword";
+import { PaymentCallback } from "./pages/PaymentCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/student" element={<StudentDashboard />} />
               <Route path="/facilitator" element={<FacilitatorDashboard />} />
               <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route path="/payment-callback" element={<PaymentCallback />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>

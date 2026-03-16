@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import { auth } from '../middleware/auth.js';
 import { sendEmail } from '../utils/emailService.js';
+import { initiatePayment, verifyPayment } from '../utils/phonePeService.js';
 
 const router = express.Router();
 
@@ -34,14 +35,22 @@ router.post('/register',
     }
 
     try {
-      const { email, password, name, phone, college, department, year } = req.body;
+      let { email, password, name, phone, college, department, year } = req.body;
+
+      // Format phone number - add +91 if not present
+      phone = phone.replace(/\D/g, '');
+      if (phone.length === 10) {
+        phone = '+91' + phone;
+      } else if (!phone.startsWith('+91')) {
+        return res.status(400).json({ error: 'Invalid phone number. Please enter a 10-digit number.' });
+      }
 
       const exists = await User.findOne({ email });
       if (exists) {
         return res.status(400).json({ error: 'Email already registered' });
       }
 
-      // Force student role for public registration
+      // Create user with pending payment status
       const userData = { 
         email, 
         password, 
@@ -51,28 +60,26 @@ router.post('/register',
         department,
         year,
         role: 'student',
-        userType: 'student'
+        userType: 'student',
+        paymentStatus: 'pending',
+        isPaymentVerified: false
       };
 
       const user = await User.create(userData);
-      const token = generateToken(user._id);
+
+      // Initiate PhonePe payment
+      const paymentResponse = await initiatePayment(user, 100); // 100 rupees registration fee
 
       res.status(201).json({
-        user: {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          phone: user.phone,
-          college: user.college,
-          department: user.department,
-          year: user.year,
-          role: user.role,
-          userType: user.userType
-        },
-        token
+        success: true,
+        message: 'User created. Redirecting to payment gateway...',
+        paymentUrl: paymentResponse.data.data.instrumentResponse.redirectUrl,
+        merchantTransactionId: paymentResponse.merchantTransactionId,
+        userId: user._id
       });
     } catch (error) {
-      res.status(500).json({ error: 'Server error' });
+      console.error('Registration error:', error);
+      res.status(500).json({ error: error.message || 'Server error' });
     }
   }
 );
@@ -351,5 +358,105 @@ router.post('/resend-otp',
     }
   }
 );
+
+export default router;
+
+
+// Payment callback endpoint
+router.post('/payment-callback', async (req, res) => {
+  try {
+    const { merchantTransactionId, userId } = req.body;
+
+    if (!merchantTransactionId) {
+      return res.status(400).json({ error: 'Transaction ID is required' });
+    }
+
+    // Verify payment with PhonePe
+    const paymentVerification = await verifyPayment(merchantTransactionId);
+
+    if (paymentVerification.success && paymentVerification.data.success) {
+      // Update user payment status
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      user.paymentStatus = 'completed';
+      user.isPaymentVerified = true;
+      user.transactionId = merchantTransactionId;
+      user.paymentId = paymentVerification.data.data.transactionId;
+      user.paymentAmount = paymentVerification.data.data.amount / 100; // Convert from paise
+      await user.save();
+
+      // Generate token for the user
+      const token = generateToken(user._id);
+
+      // Send welcome email
+      const emailTemplate = `
+        <h2>Welcome to PAIE Cell!</h2>
+        <p>Hi ${user.name},</p>
+        <p>Your registration has been completed successfully!</p>
+        <p><strong>Transaction ID:</strong> ${merchantTransactionId}</p>
+        <p>You can now login to your account and explore all the amazing events and courses.</p>
+        <p>Best regards,<br/>PAIE Cell Team</p>
+      `;
+
+      try {
+        await sendEmail(user.email, 'Registration Successful - Welcome to PAIE Cell', emailTemplate);
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+      }
+
+      return res.json({
+        success: true,
+        message: 'Payment verified and registration completed',
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          phone: user.phone,
+          college: user.college,
+          department: user.department,
+          year: user.year,
+          role: user.role,
+          userType: user.userType
+        },
+        token
+      });
+    } else {
+      // Payment failed
+      const user = await User.findById(userId);
+      if (user) {
+        user.paymentStatus = 'failed';
+        await user.save();
+      }
+
+      return res.status(400).json({
+        success: false,
+        error: 'Payment verification failed. Please try again.'
+      });
+    }
+  } catch (error) {
+    console.error('Payment callback error:', error);
+    res.status(500).json({ error: 'Server error during payment verification' });
+  }
+});
+
+// Check payment status endpoint
+router.get('/payment-status/:transactionId', async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+
+    const paymentVerification = await verifyPayment(transactionId);
+
+    res.json({
+      success: paymentVerification.success,
+      data: paymentVerification.data
+    });
+  } catch (error) {
+    console.error('Payment status check error:', error);
+    res.status(500).json({ error: 'Failed to check payment status' });
+  }
+});
 
 export default router;

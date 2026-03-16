@@ -59,6 +59,18 @@ const userSchema = new mongoose.Schema({
   otpAttempts: {
     type: Number,
     default: 0
+  },
+  isPaymentVerified: {
+    type: Boolean,
+    default: false
+  },
+  paymentId: String,
+  transactionId: String,
+  paymentAmount: Number,
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
   }
 }, {
   timestamps: true
