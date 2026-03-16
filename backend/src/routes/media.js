@@ -2,7 +2,7 @@ import express from 'express';
 import Media from '../models/Media.js';
 import Event from '../models/Event.js';
 import Course from '../models/Course.js';
-import { verifyToken } from '../middleware/auth.js';
+import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -49,7 +49,7 @@ router.get('/item/:itemId', async (req, res) => {
 });
 
 // Create media
-router.post('/', verifyToken, async (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
     const { title, description, type, itemId, mediaType, mediaUrl } = req.body;
 
@@ -100,7 +100,7 @@ router.post('/', verifyToken, async (req, res) => {
 });
 
 // Update media
-router.put('/:id', verifyToken, async (req, res) => {
+router.put('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, mediaType, mediaUrl } = req.body;
@@ -123,7 +123,7 @@ router.put('/:id', verifyToken, async (req, res) => {
 });
 
 // Delete media
-router.delete('/:id', verifyToken, async (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     const media = await Media.findByIdAndDelete(id);
