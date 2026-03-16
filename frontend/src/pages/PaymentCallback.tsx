@@ -35,7 +35,7 @@ export const PaymentCallback = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             merchantTransactionId: transactionId,
-            userId: userData.userId
+            userData: userData
           })
         });
 

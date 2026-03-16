@@ -80,8 +80,11 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
       }
 
       // Store user data temporarily for payment callback
-      sessionStorage.setItem('pendingUserId', data.userId);
-      sessionStorage.setItem('pendingUserData', JSON.stringify(data));
+      sessionStorage.setItem('pendingUserData', JSON.stringify({
+        ...form,
+        role: "student",
+        userType: "student",
+      }));
 
       toast({
         title: "Redirecting to Payment",

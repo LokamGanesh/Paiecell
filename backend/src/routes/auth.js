@@ -50,36 +50,31 @@ router.post('/register',
         return res.status(400).json({ error: 'Email already registered' });
       }
 
-      // Create user with pending payment status
-      const userData = { 
-        email, 
-        password, 
+      // Create temporary user object for payment initiation (not saved to DB yet)
+      const tempUserData = {
+        email,
         name,
         phone,
         college,
         department,
         year,
-        role: 'student',
-        userType: 'student',
-        paymentStatus: 'pending',
-        isPaymentVerified: false
+        password
       };
 
-      const user = await User.create(userData);
+      // Initiate PhonePe payment with temporary data
+      const paymentResponse = await initiatePayment(tempUserData, 100);
 
-      // Initiate PhonePe payment
-      const paymentResponse = await initiatePayment(user, 100); // 100 rupees registration fee
-
-      res.status(201).json({
+      // Return payment URL without creating user in DB
+      res.status(200).json({
         success: true,
-        message: 'User created. Redirecting to payment gateway...',
+        message: 'Payment gateway initiated. Complete payment to register.',
         paymentUrl: paymentResponse.data.data.instrumentResponse.redirectUrl,
         merchantTransactionId: paymentResponse.merchantTransactionId,
-        userId: user._id
+        userData: tempUserData
       });
     } catch (error) {
       console.error('Registration error:', error);
-      res.status(500).json({ error: error.message || 'Server error' });
+      res.status(500).json({ error: error.message || 'Failed to initiate payment. Please try again.' });
     }
   }
 );
@@ -362,36 +357,47 @@ router.post('/resend-otp',
 // Payment callback endpoint
 router.post('/payment-callback', async (req, res) => {
   try {
-    const { merchantTransactionId, userId } = req.body;
+    const { merchantTransactionId, userData } = req.body;
 
-    if (!merchantTransactionId) {
-      return res.status(400).json({ error: 'Transaction ID is required' });
+    if (!merchantTransactionId || !userData) {
+      return res.status(400).json({ error: 'Invalid payment session' });
     }
 
     // Verify payment with PhonePe
     const paymentVerification = await verifyPayment(merchantTransactionId);
 
     if (paymentVerification.success && paymentVerification.data.success) {
-      // Update user payment status
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+      // Check if user already exists
+      const existingUser = await User.findOne({ email: userData.email });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Email already registered' });
       }
 
-      user.paymentStatus = 'completed';
-      user.isPaymentVerified = true;
-      user.transactionId = merchantTransactionId;
-      user.paymentId = paymentVerification.data.data.transactionId;
-      user.paymentAmount = paymentVerification.data.data.amount / 100; // Convert from paise
-      await user.save();
+      // Create user only after successful payment
+      const newUser = await User.create({
+        email: userData.email,
+        password: userData.password,
+        name: userData.name,
+        phone: userData.phone,
+        college: userData.college,
+        department: userData.department,
+        year: userData.year,
+        role: 'student',
+        userType: 'student',
+        paymentStatus: 'completed',
+        isPaymentVerified: true,
+        transactionId: merchantTransactionId,
+        paymentId: paymentVerification.data.data.transactionId,
+        paymentAmount: paymentVerification.data.data.amount / 100
+      });
 
       // Generate token for the user
-      const token = generateToken(user._id);
+      const token = generateToken(newUser._id);
 
       // Send welcome email
       const emailTemplate = `
         <h2>Welcome to PAIE Cell!</h2>
-        <p>Hi ${user.name},</p>
+        <p>Hi ${newUser.name},</p>
         <p>Your registration has been completed successfully!</p>
         <p><strong>Transaction ID:</strong> ${merchantTransactionId}</p>
         <p>You can now login to your account and explore all the amazing events and courses.</p>
@@ -399,7 +405,7 @@ router.post('/payment-callback', async (req, res) => {
       `;
 
       try {
-        await sendEmail(user.email, 'Registration Successful - Welcome to PAIE Cell', emailTemplate);
+        await sendEmail(newUser.email, 'Registration Successful - Welcome to PAIE Cell', emailTemplate);
       } catch (emailError) {
         console.error('Failed to send welcome email:', emailError);
       }
@@ -408,26 +414,19 @@ router.post('/payment-callback', async (req, res) => {
         success: true,
         message: 'Payment verified and registration completed',
         user: {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          phone: user.phone,
-          college: user.college,
-          department: user.department,
-          year: user.year,
-          role: user.role,
-          userType: user.userType
+          id: newUser._id,
+          email: newUser.email,
+          name: newUser.name,
+          phone: newUser.phone,
+          college: newUser.college,
+          department: newUser.department,
+          year: newUser.year,
+          role: newUser.role,
+          userType: newUser.userType
         },
         token
       });
     } else {
-      // Payment failed
-      const user = await User.findById(userId);
-      if (user) {
-        user.paymentStatus = 'failed';
-        await user.save();
-      }
-
       return res.status(400).json({
         success: false,
         error: 'Payment verification failed. Please try again.'
