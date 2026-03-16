@@ -359,9 +359,6 @@ router.post('/resend-otp',
   }
 );
 
-export default router;
-
-
 // Payment callback endpoint
 router.post('/payment-callback', async (req, res) => {
   try {
