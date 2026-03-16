@@ -61,28 +61,49 @@ router.post('/register',
         password
       };
 
-      // Initiate PhonePe payment with temporary data
-      const paymentResponse = await initiatePayment(tempUserData, 100);
+      try {
+        // Initiate PhonePe payment with temporary data
+        const paymentResponse = await initiatePayment(tempUserData, 100);
 
-      // Extract payment URL from response
-      const paymentUrl = paymentResponse.data?.data?.instrumentResponse?.redirectUrl;
-      
-      if (!paymentUrl) {
-        console.error('Payment URL not found in response:', paymentResponse.data);
-        return res.status(500).json({ error: 'Failed to get payment URL. Please try again.' });
+        // Extract payment URL from response
+        const paymentUrl = paymentResponse.data?.data?.instrumentResponse?.redirectUrl;
+        
+        if (!paymentUrl) {
+          console.error('Payment URL not found in response:', paymentResponse.data);
+          return res.status(500).json({ error: 'Failed to get payment URL. Please try again.' });
+        }
+
+        // Return payment URL without creating user in DB
+        res.status(200).json({
+          success: true,
+          message: 'Payment gateway initiated. Complete payment to register.',
+          paymentUrl,
+          merchantTransactionId: paymentResponse.merchantTransactionId,
+          userData: tempUserData
+        });
+      } catch (paymentError) {
+        console.error('PhonePe payment error:', paymentError.message);
+        
+        // Fallback: If PhonePe fails, return a test payment URL
+        if (process.env.NODE_ENV === 'development') {
+          const merchantTransactionId = `PAIE_${Date.now()}_${email.split('@')[0]}`;
+          res.status(200).json({
+            success: true,
+            message: 'Payment gateway initiated (Test Mode). Complete payment to register.',
+            paymentUrl: `${process.env.FRONTEND_URL}/payment-callback?transactionId=${merchantTransactionId}&test=true`,
+            merchantTransactionId,
+            userData: tempUserData,
+            testMode: true
+          });
+        } else {
+          res.status(500).json({ error: 'Failed to initiate payment. Please try again.' });
+        }
       }
-
-      // Return payment URL without creating user in DB
-      res.status(200).json({
-        success: true,
-        message: 'Payment gateway initiated. Complete payment to register.',
-        paymentUrl,
-        merchantTransactionId: paymentResponse.merchantTransactionId,
-        userData: tempUserData
-      });
     } catch (error) {
       console.error('Registration error:', error);
-      res.status(500).json({ error: error.message || 'Failed to initiate payment. Please try again.' });
+      res.status(500).json({ 
+        error: error.message || 'Failed to process registration. Please try again.'
+      });
     }
   }
 );
@@ -365,14 +386,30 @@ router.post('/resend-otp',
 // Payment callback endpoint
 router.post('/payment-callback', async (req, res) => {
   try {
-    const { merchantTransactionId, userData } = req.body;
+    const { merchantTransactionId, userData, testMode } = req.body;
 
     if (!merchantTransactionId || !userData) {
       return res.status(400).json({ error: 'Invalid payment session' });
     }
 
-    // Verify payment with PhonePe
-    const paymentVerification = await verifyPayment(merchantTransactionId);
+    let paymentVerification;
+
+    // In test mode, skip PhonePe verification
+    if (testMode) {
+      paymentVerification = {
+        success: true,
+        data: {
+          success: true,
+          data: {
+            transactionId: merchantTransactionId,
+            amount: 10000 // 100 rupees in paise
+          }
+        }
+      };
+    } else {
+      // Verify payment with PhonePe
+      paymentVerification = await verifyPayment(merchantTransactionId);
+    }
 
     if (paymentVerification.success && paymentVerification.data.success) {
       // Check if user already exists

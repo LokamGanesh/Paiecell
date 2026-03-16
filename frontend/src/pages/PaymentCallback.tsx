@@ -19,6 +19,7 @@ export const PaymentCallback = () => {
     const verifyPayment = async () => {
       try {
         const transactionId = searchParams.get('transactionId');
+        const testMode = searchParams.get('test') === 'true';
         const pendingUserData = sessionStorage.getItem('pendingUserData');
 
         if (!transactionId || !pendingUserData) {
@@ -35,7 +36,8 @@ export const PaymentCallback = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             merchantTransactionId: transactionId,
-            userData: userData
+            userData: userData,
+            testMode
           })
         });
 
