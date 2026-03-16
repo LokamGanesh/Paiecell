@@ -36,17 +36,27 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
     phone: "",
-    college: "",
-    department: "",
+    college: "SRKR Engineering College",
+    Department: "",
     year: "",
   });
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.password || 
+    if (!form.name || !form.email || !form.password || !form.confirmPassword ||
         !form.phone || !form.college || !form.department || !form.year) {
       toast({ title: "Please fill all required fields", variant: "destructive" });
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    if (form.password.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
       return;
     }
 
@@ -135,6 +145,27 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
             </div>
           </div>
           <div>
+            <Label htmlFor="confirmPassword">Confirm Password *</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                value={form.confirmPassword}
+                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                placeholder="Re-enter your password"
+                required
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
             <Label htmlFor="college">College *</Label>
             <Input
               id="college"
@@ -145,14 +176,14 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
             />
           </div>
           <div>
-            <Label htmlFor="department">Department *</Label>
+            <Label htmlFor="department">Branch *</Label>
             <Select
               value={form.department}
               onValueChange={(v) => setForm({ ...form, department: v })}
               required
             >
               <SelectTrigger id="department">
-                <SelectValue placeholder="Select department" />
+                <SelectValue placeholder="Select Branch" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="AIDS">AIDS</SelectItem>
@@ -160,10 +191,9 @@ export const SignupDialog = ({ open, onOpenChange, onSwitchToLogin }: SignupDial
                 <SelectItem value="CSE">CSE</SelectItem>
                 <SelectItem value="CSD">CSD</SelectItem>
                 <SelectItem value="CIC">CIC</SelectItem>
-                <SelectItem value="CSB">CSB</SelectItem>
-                <SelectItem value="SCS">SCS</SelectItem>
+                <SelectItem value="CSB">CSBS</SelectItem>
+                <SelectItem value="SCS">CSIT</SelectItem>
                 <SelectItem value="IT">IT</SelectItem>
-                <SelectItem value="ITC">ITC</SelectItem>
                 <SelectItem value="CIVIL">CIVIL</SelectItem>
                 <SelectItem value="MECH">MECH</SelectItem>
                 <SelectItem value="ECE">ECE</SelectItem>

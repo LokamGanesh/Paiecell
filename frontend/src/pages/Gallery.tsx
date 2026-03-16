@@ -5,22 +5,27 @@ import EventCard from "@/components/EventCard";
 import { eventsApi, coursesApi } from "@/lib/api";
 import { Play } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const Gallery = () => {
   const [sliderPosition, setSliderPosition] = useState(50); // 0 = Events, 100 = Courses
   const [events, setEvents] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
+  const [media, setMedia] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [eventsData, coursesData] = await Promise.all([
+        const [eventsData, coursesData, mediaData] = await Promise.all([
           eventsApi.getAll(),
           coursesApi.getAll(),
+          fetch(`${API_URL}/media`).then(res => res.json())
         ]);
         setEvents(eventsData.events || []);
         setCourses(coursesData.courses || []);
+        setMedia(mediaData.media || []);
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {
@@ -34,6 +39,11 @@ const Gallery = () => {
   const displayedItems = sliderPosition < 50 
     ? events.map(e => ({ ...e, type: 'event' }))
     : courses.map(c => ({ ...c, type: 'course' }));
+
+  // Filter media for current type
+  const currentTypeMedia = media.filter(m => m.type === (sliderPosition < 50 ? 'event' : 'course'));
+  const videoMedia = currentTypeMedia.filter(m => m.mediaType === 'video');
+  const imageMedia = currentTypeMedia.filter(m => m.mediaType === 'image');
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,53 +94,85 @@ const Gallery = () => {
         ) : (
           <>
             {/* Videos Section */}
-            {displayedItems.some(item => item.video) && (
+            {videoMedia.length > 0 && (
               <div className="mb-12">
                 <h2 className="text-2xl font-bold text-foreground mb-6">Videos</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {displayedItems
-                    .filter(item => item.video)
-                    .map((item) => (
-                      <div key={`${item._id}-video`} className="relative group cursor-pointer">
-                        <div 
-                          className="relative w-full h-48 bg-black rounded-lg overflow-hidden"
-                          onClick={() => setSelectedVideo(item.video)}
-                        >
-                          <iframe
-                            width="100%"
-                            height="100%"
-                            src={item.video.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
-                            title={item.title}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            className="w-full h-full"
-                          />
-                        </div>
-                        <div className="mt-3">
-                          <h3 className="font-semibold text-foreground">{item.title}</h3>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-muted-foreground">{item.category}</span>
-                            <span className="px-2 py-1 bg-primary/90 text-primary-foreground text-xs font-semibold rounded">
-                              {item.type === 'event' ? 'Event' : 'Course'}
-                            </span>
-                          </div>
+                  {videoMedia.map((item) => (
+                    <div key={item._id} className="relative group cursor-pointer">
+                      <div 
+                        className="relative w-full h-48 bg-black rounded-lg overflow-hidden"
+                        onClick={() => setSelectedVideo(item.mediaUrl)}
+                      >
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={item.mediaUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                          title={item.title}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="w-full h-full"
+                        />
+                      </div>
+                      <div className="mt-3">
+                        <h3 className="font-semibold text-foreground">{item.title}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs text-muted-foreground">{item.itemTitle}</span>
+                          <span className="px-2 py-1 bg-primary/90 text-primary-foreground text-xs font-semibold rounded">
+                            {item.type === 'event' ? 'Event' : 'Course'}
+                          </span>
                         </div>
                       </div>
-                    ))}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
             {/* Images Section */}
-            {displayedItems.some(item => item.image) && (
+            {imageMedia.length > 0 && (
               <div>
                 <h2 className="text-2xl font-bold text-foreground mb-6">Images</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {imageMedia.map((item) => (
+                    <div key={item._id} className="relative group">
+                      <div className="relative w-full h-48 bg-muted rounded-lg overflow-hidden">
+                        <img 
+                          src={item.mediaUrl}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                          }}
+                        />
+                      </div>
+                      <div className="mt-3">
+                        <h3 className="font-semibold text-foreground">{item.title}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-xs text-muted-foreground">{item.itemTitle}</span>
+                          <span className="px-2 py-1 bg-primary/90 text-primary-foreground text-xs font-semibold rounded">
+                            {item.type === 'event' ? 'Event' : 'Course'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Original items display */}
+            {displayedItems.some(item => item.image) && (
+              <div className="mt-12">
+                <h2 className="text-2xl font-bold text-foreground mb-6">Featured</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {displayedItems
                     .filter(item => item.image)
                     .map((item) => (
-                      <div key={`${item._id}-image`} className="relative">
+                      <div key={`${item._id}-featured`} className="relative">
                         <EventCard event={item} />
                         <div className="absolute top-2 right-2 px-2 py-1 bg-primary/90 text-primary-foreground text-xs font-semibold rounded">
                           {item.type === 'event' ? 'Event' : 'Course'}
@@ -141,15 +183,15 @@ const Gallery = () => {
               </div>
             )}
 
-            {displayedItems.length === 0 && (
+            {videoMedia.length === 0 && imageMedia.length === 0 && displayedItems.length === 0 && (
               <p className="text-center text-muted-foreground py-12">
                 No {sliderPosition < 50 ? 'events' : 'courses'} found.
               </p>
             )}
 
-            {displayedItems.length > 0 && !displayedItems.some(item => item.video) && !displayedItems.some(item => item.image) && (
+            {videoMedia.length === 0 && imageMedia.length === 0 && displayedItems.length > 0 && (
               <p className="text-center text-muted-foreground py-12">
-                No videos or images available for {sliderPosition < 50 ? 'events' : 'courses'}.
+                No media available for {sliderPosition < 50 ? 'events' : 'courses'}.
               </p>
             )}
           </>

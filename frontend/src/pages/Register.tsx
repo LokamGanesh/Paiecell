@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Eye, EyeOff } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,16 @@ const Register = () => {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    password: "",
+    confirmPassword: "",
     phone: "",
-    college: "",
+    college: "SRKR Engineering College",
     department: "",
     year: "",
     eventId: preselectedEvent,
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -66,6 +70,18 @@ const Register = () => {
     e.preventDefault();
     if (!form.name || !form.email || !form.phone || !form.college || !form.department || !form.year || !form.eventId) {
       toast({ title: "Please fill all fields", variant: "destructive" });
+      return;
+    }
+    if (!user && (!form.password || !form.confirmPassword)) {
+      toast({ title: "Please enter and confirm your password", variant: "destructive" });
+      return;
+    }
+    if (!user && form.password !== form.confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    if (!user && form.password && form.password.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
       return;
     }
     
@@ -160,6 +176,50 @@ const Register = () => {
             />
             {user && <p className="text-xs text-muted-foreground mt-1">Autofilled from your profile</p>}
           </div>
+          {!user && (
+            <>
+              <div>
+                <Label htmlFor="password">Password *</Label>
+                <div className="relative">
+                  <Input 
+                    id="password" 
+                    type={showPassword ? "text" : "password"}
+                    value={form.password} 
+                    onChange={(e) => setForm({ ...form, password: e.target.value })} 
+                    placeholder="Min. 6 characters"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <div className="relative">
+                  <Input 
+                    id="confirmPassword" 
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={form.confirmPassword} 
+                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} 
+                    placeholder="Re-enter your password"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
           <div>
             <Label htmlFor="college">College *</Label>
             <Input 

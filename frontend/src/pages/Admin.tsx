@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Calendar, Users, FileDown, Mail, ExternalLink, LogOut, Menu, X, UserCog, BookOpen, Settings } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, FileDown, Mail, ExternalLink, LogOut, Menu, X, UserCog, BookOpen, Settings, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserManagement } from "@/components/UserManagement";
 import { EventManagement } from "@/components/EventManagement";
 import { CourseManagement } from "@/components/CourseManagement";
+import { MediaManagement } from "@/components/MediaManagement";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -13,6 +14,7 @@ const NAV = [
   { label: "Dashboard", icon: LayoutDashboard, id: "dashboard" },
   { label: "Events", icon: Calendar, id: "events" },
   { label: "Courses", icon: BookOpen, id: "courses" },
+  { label: "Media", icon: Image, id: "media" },
   { label: "Registrations", icon: Users, id: "registrations" },
   { label: "User Management", icon: UserCog, id: "users" },
   { label: "YES+ Tracking", icon: ExternalLink, id: "tracking" },
@@ -185,6 +187,8 @@ const Admin = () => {
           {activeTab === "events" && <EventManagement />}
 
           {activeTab === "courses" && <CourseManagement />}
+
+          {activeTab === "media" && <MediaManagement />}
 
           {activeTab === "registrations" && (
             <div className="space-y-4">
