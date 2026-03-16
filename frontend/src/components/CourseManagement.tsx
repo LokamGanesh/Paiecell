@@ -69,6 +69,7 @@ export const CourseManagement = () => {
     instructor: "",
     level: "Beginner",
     image: "",
+    video: "",
     capacity: 0,
     status: "upcoming",
     startDate: "",

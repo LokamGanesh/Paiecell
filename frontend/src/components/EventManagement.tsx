@@ -73,6 +73,7 @@ export const EventManagement = () => {
     endTime: "",
     venue: "",
     image: "",
+    video: "",
     capacity: 0,
     isExternal: false,
     externalLink: "",
@@ -443,6 +444,17 @@ export const EventManagement = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="video">Event Video URL</Label>
+              <Input
+                id="video"
+                value={(form as any).video}
+                onChange={(e) => setForm({ ...form, video: e.target.value } as any)}
+                placeholder="Paste video URL (YouTube, Vimeo, etc.)"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Paste the full URL of your video</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

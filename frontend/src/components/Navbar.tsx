@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { label: "Home", path: "/" },
   { label: "Courses", path: "/courses" },
   { label: "Events", path: "/events" },
+  { label: "Gallery", path: "/gallery" },
 ];
 
 const Navbar = () => {

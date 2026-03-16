@@ -6,6 +6,7 @@ node_modules/
 .env
 .env.local
 .env.production
+.env.development
 backend/.env
 frontend/.env
 
@@ -20,16 +21,20 @@ build/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
 # OS files
 .DS_Store
 Thumbs.db
+*.pem
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
 # Uploads
 backend/uploads/*
@@ -37,7 +42,24 @@ backend/uploads/*
 
 # Testing
 coverage/
+.nyc_output/
 
 # Misc
 .cache/
 .temp/
+.env.*.local
+*.tsbuildinfo
+
+# Vercel
+.vercel/
+
+# Next.js
+.next/
+out/
+
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
