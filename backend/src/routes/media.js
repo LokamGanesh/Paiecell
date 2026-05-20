@@ -3,9 +3,26 @@ import Media from '../models/Media.js';
 import Event from '../models/Event.js';
 import Course from '../models/Course.js';
 import { auth } from '../middleware/auth.js';
-import { deleteFromCloudinary, getPublicIdFromUrl } from '../utils/cloudinaryService.js';
+import { deleteFromCloudinary, getPublicIdFromUrl, fetchFromCloudinaryFolder } from '../utils/cloudinaryService.js';
 
 const router = express.Router();
+
+// Get all media from Cloudinary folder directly (events or courses)
+// This shows images uploaded directly to Cloudinary, not just via the app
+router.get('/cloudinary/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    if (!['events', 'courses'].includes(type)) {
+      return res.status(400).json({ error: 'Invalid type. Use "events" or "courses"' });
+    }
+
+    const resources = await fetchFromCloudinaryFolder(type);
+    res.json({ resources, type });
+  } catch (error) {
+    console.error('Cloudinary fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch from Cloudinary' });
+  }
+});
 
 // Get all media
 router.get('/', async (req, res) => {

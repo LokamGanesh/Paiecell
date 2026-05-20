@@ -29,6 +29,58 @@ export const uploadToCloudinary = (fileBuffer, originalName, type = 'events') =>
   });
 };
 
+// Fetch all resources from a Cloudinary folder (events or courses)
+export const fetchFromCloudinaryFolder = async (type = 'events') => {
+  const folder = `paiecell/gallery/${type}`;
+  const resources = [];
+  let nextCursor = null;
+
+  do {
+    const options = {
+      type: 'upload',
+      prefix: folder,
+      max_results: 100,
+      resource_type: 'image'
+    };
+    if (nextCursor) options.next_cursor = nextCursor;
+
+    const result = await cloudinary.api.resources(options);
+    resources.push(...result.resources);
+    nextCursor = result.next_cursor || null;
+  } while (nextCursor);
+
+  // Also fetch videos
+  let nextVideoCursor = null;
+  do {
+    const options = {
+      type: 'upload',
+      prefix: folder,
+      max_results: 100,
+      resource_type: 'video'
+    };
+    if (nextVideoCursor) options.next_cursor = nextVideoCursor;
+
+    try {
+      const result = await cloudinary.api.resources(options);
+      resources.push(...result.resources);
+      nextVideoCursor = result.next_cursor || null;
+    } catch {
+      nextVideoCursor = null;
+    }
+  } while (nextVideoCursor);
+
+  return resources.map(r => ({
+    publicId: r.public_id,
+    url: r.secure_url,
+    resourceType: r.resource_type,
+    format: r.format,
+    width: r.width,
+    height: r.height,
+    createdAt: r.created_at,
+    displayName: r.public_id.split('/').pop().replace(/[-_]/g, ' ')
+  }));
+};
+
 // Delete a file from Cloudinary by public_id
 export const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
   try {
@@ -45,15 +97,12 @@ export const deleteFromCloudinary = async (publicId, resourceType = 'image') => 
 // Extract public_id from a Cloudinary URL
 export const getPublicIdFromUrl = (url) => {
   try {
-    // e.g. https://res.cloudinary.com/<cloud>/image/upload/v123/paiecell/gallery/events/filename.jpg
     const parts = url.split('/');
     const uploadIndex = parts.indexOf('upload');
     if (uploadIndex === -1) return null;
-    // Skip version segment (v123...)
     const afterUpload = parts.slice(uploadIndex + 1);
     const withoutVersion = afterUpload[0].startsWith('v') ? afterUpload.slice(1) : afterUpload;
     const publicIdWithExt = withoutVersion.join('/');
-    // Remove file extension
     return publicIdWithExt.replace(/\.[^/.]+$/, '');
   } catch {
     return null;
