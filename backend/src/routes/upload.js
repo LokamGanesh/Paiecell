@@ -1,101 +1,104 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
 import { auth, adminAuth } from '../middleware/auth.js';
+import { uploadToCloudinary, deleteFromCloudinary, getPublicIdFromUrl } from '../utils/cloudinaryService.js';
 
 const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Use memory storage - files go to Cloudinary, not disk
+const storage = multer.memoryStorage();
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for file storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-// File filter to accept only images
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif|webp/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
+  const allowedImageTypes = /jpeg|jpg|png|gif|webp/;
+  const allowedVideoTypes = /mp4|mov|avi|mkv|webm/;
+  const ext = file.originalname.split('.').pop().toLowerCase();
+  const isImage = allowedImageTypes.test(ext) && allowedImageTypes.test(file.mimetype);
+  const isVideo = allowedVideoTypes.test(ext);
 
-  if (mimetype && extname) {
-    return cb(null, true);
+  if (isImage || isVideo) {
+    cb(null, true);
   } else {
-    cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
+    cb(new Error('Only image (jpeg, jpg, png, gif, webp) and video (mp4, mov, avi, mkv, webm) files are allowed'));
   }
 };
 
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: fileFilter
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  fileFilter
 });
 
-// Upload single image
-router.post('/image', auth, adminAuth, upload.single('image'), (req, res) => {
+// Upload single image → Cloudinary paiecell/gallery/events or courses
+router.post('/image', auth, adminAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
-    res.json({ 
+    const type = req.body.type === 'course' ? 'courses' : 'events';
+    const result = await uploadToCloudinary(req.file.buffer, req.file.originalname, type);
+
+    res.json({
       message: 'Image uploaded successfully',
-      imageUrl: imageUrl,
-      filename: req.file.filename
+      imageUrl: result.secure_url,
+      publicId: result.public_id,
+      width: result.width,
+      height: result.height
     });
   } catch (error) {
+    console.error('Image upload error:', error);
     res.status(500).json({ error: 'Failed to upload image' });
   }
 });
 
-// Upload media (image or video)
-router.post('/media', auth, adminAuth, upload.single('media'), (req, res) => {
+// Upload media (image or video) → Cloudinary
+router.post('/media', auth, adminAuth, upload.single('media'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const mediaUrl = `/uploads/${req.file.filename}`;
-    res.json({ 
+    const type = req.body.type === 'course' ? 'courses' : 'events';
+    const result = await uploadToCloudinary(req.file.buffer, req.file.originalname, type);
+
+    res.json({
       message: 'Media uploaded successfully',
-      mediaUrl: mediaUrl,
-      filename: req.file.filename
+      mediaUrl: result.secure_url,
+      publicId: result.public_id,
+      resourceType: result.resource_type
     });
   } catch (error) {
+    console.error('Media upload error:', error);
     res.status(500).json({ error: 'Failed to upload media' });
   }
 });
 
-// Delete image
-router.delete('/image/:filename', auth, adminAuth, (req, res) => {
+// Delete image/media from Cloudinary
+router.delete('/image/:publicId(*)', auth, adminAuth, async (req, res) => {
   try {
-    const filename = req.params.filename;
-    const filePath = path.join(uploadsDir, filename);
-
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      res.json({ message: 'Image deleted successfully' });
-    } else {
-      res.status(404).json({ error: 'Image not found' });
-    }
+    const publicId = req.params.publicId;
+    await deleteFromCloudinary(publicId);
+    res.json({ message: 'Media deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete image' });
+    console.error('Delete error:', error);
+    res.status(500).json({ error: 'Failed to delete media' });
+  }
+});
+
+// Delete by URL (extracts public_id automatically)
+router.delete('/by-url', auth, adminAuth, async (req, res) => {
+  try {
+    const { url, resourceType } = req.body;
+    if (!url) return res.status(400).json({ error: 'URL is required' });
+
+    const publicId = getPublicIdFromUrl(url);
+    if (!publicId) return res.status(400).json({ error: 'Could not extract public ID from URL' });
+
+    await deleteFromCloudinary(publicId, resourceType || 'image');
+    res.json({ message: 'Media deleted successfully', publicId });
+  } catch (error) {
+    console.error('Delete by URL error:', error);
+    res.status(500).json({ error: 'Failed to delete media' });
   }
 });
 

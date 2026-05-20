@@ -34,6 +34,10 @@ const mediaSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  publicId: {
+    type: String,
+    trim: true
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

@@ -59,7 +59,8 @@ export const MediaManagement = () => {
     type: "event" as 'event' | 'course',
     itemId: "",
     mediaType: "image" as 'image' | 'video',
-    mediaUrl: ""
+    mediaUrl: "",
+    publicId: ""
   });
 
   useEffect(() => {
@@ -112,7 +113,8 @@ export const MediaManagement = () => {
       type: "event",
       itemId: "",
       mediaType: "image",
-      mediaUrl: ""
+      mediaUrl: "",
+      publicId: ""
     });
     setEditingMedia(null);
   };
@@ -122,6 +124,7 @@ export const MediaManagement = () => {
     try {
       const formData = new FormData();
       formData.append('media', file);
+      formData.append('type', form.type); // 'event' or 'course' → maps to events/courses folder
 
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/upload/media`, {
@@ -135,9 +138,8 @@ export const MediaManagement = () => {
       const data = await res.json();
 
       if (res.ok) {
-        const mediaUrl = `${API_URL.replace('/api', '')}${data.mediaUrl}`;
-        setForm({ ...form, mediaUrl });
-        toast({ title: "Media uploaded successfully!" });
+        setForm(prev => ({ ...prev, mediaUrl: data.mediaUrl, publicId: data.publicId }));
+        toast({ title: "Media uploaded to Cloudinary successfully!" });
       } else {
         toast({
           title: "Failed to upload media",
@@ -181,7 +183,8 @@ export const MediaManagement = () => {
         type: mediaItem.type,
         itemId: mediaItem.itemId,
         mediaType: mediaItem.mediaType,
-        mediaUrl: mediaItem.mediaUrl
+        mediaUrl: mediaItem.mediaUrl,
+        publicId: (mediaItem as any).publicId || ""
       });
     } else {
       resetForm();
