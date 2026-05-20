@@ -1,20 +1,26 @@
 import { v2 as cloudinary } from 'cloudinary';
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+// Configure lazily so dotenv has time to load
+const getCloudinary = () => {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+  return cloudinary;
+};
 
 // Upload a file buffer to Cloudinary
-// type: 'events' or 'courses'
-export const uploadToCloudinary = (fileBuffer, originalName, type = 'events') => {
+// type: 'events' or 'courses' — goes to paiecell/gallery/<type>
+// folder: override the full folder path directly (optional)
+export const uploadToCloudinary = (fileBuffer, _originalName, type = 'events', folder = null) => {
   return new Promise((resolve, reject) => {
-    const folder = `paiecell/gallery/${type}`;
+    const targetFolder = folder || `paiecell/gallery/${type}`;
+    const cld = getCloudinary();
 
-    const uploadStream = cloudinary.uploader.upload_stream(
+    const uploadStream = cld.uploader.upload_stream(
       {
-        folder,
+        folder: targetFolder,
         resource_type: 'auto',
         use_filename: true,
         unique_filename: true
@@ -33,9 +39,10 @@ export const uploadToCloudinary = (fileBuffer, originalName, type = 'events') =>
 // Uses Search API which works with both legacy and fixed folder modes
 export const fetchFromCloudinaryFolder = async (type = 'events') => {
   const folder = `paiecell/gallery/${type}`;
+  const cld = getCloudinary();
 
   try {
-    const result = await cloudinary.search
+    const result = await cld.search
       .expression(`folder:${folder}`)
       .sort_by('created_at', 'desc')
       .max_results(100)
@@ -59,8 +66,9 @@ export const fetchFromCloudinaryFolder = async (type = 'events') => {
 
 // Delete a file from Cloudinary by public_id
 export const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
+  const cld = getCloudinary();
   try {
-    const result = await cloudinary.uploader.destroy(publicId, {
+    const result = await cld.uploader.destroy(publicId, {
       resource_type: resourceType
     });
     return result;

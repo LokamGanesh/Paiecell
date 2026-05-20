@@ -7,6 +7,7 @@ import EventCard from "@/components/EventCard";
 import { useState, useEffect } from "react";
 import { eventsApi } from "@/lib/api";
 import { useSettings } from "@/contexts/SettingsContext";
+import BodyMembersSection from "@/components/BodyMembersSection";
 
 const stats = [
   { icon: Users, label: "Students Empowered", value: "2,000+" },
@@ -26,7 +27,7 @@ const Index = () => {
       try {
         const data = await eventsApi.getAll();
         const upcoming = (data.events || [])
-          .filter((e: any) => new Date(e.date) >= new Date())
+          .filter((e: any) => e.status === 'upcoming' || e.status === 'ongoing')
           .slice(0, 3);
         setUpcomingEvents(upcoming);
       } catch (error) {
@@ -120,22 +121,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* YES+ CTA */}
-      <section className="container pb-20">
-        <div className="rounded-2xl bg-hero-gradient p-8 md:p-12 text-center">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-            Ready for the YES+ Experience?
-          </h2>
-          <p className="text-primary-foreground/90 max-w-xl mx-auto mb-6 text-lg">
-            Join the internationally acclaimed Youth Empowerment & Skills program by The Art of Living.
-          </p>
-          <a href={yesPlusLink} target="_blank" rel="noopener noreferrer">
-            <Button size="lg" variant="secondary" className="gap-2 text-base">
-              Register for YES+ <ArrowRight className="h-4 w-4" />
-            </Button>
-          </a>
-        </div>
-      </section>
+      <BodyMembersSection />
 
       <Footer />
     </div>

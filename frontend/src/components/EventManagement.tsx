@@ -125,6 +125,7 @@ export const EventManagement = () => {
     try {
       const formData = new FormData();
       formData.append('image', file);
+      formData.append('type', 'event');
 
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/upload/image`, {
@@ -138,8 +139,7 @@ export const EventManagement = () => {
       const data = await res.json();
 
       if (res.ok) {
-        const imageUrl = `${API_URL.replace('/api', '')}${data.imageUrl}`;
-        setForm({ ...form, image: imageUrl });
+        setForm(prev => ({ ...prev, image: data.imageUrl }));
         toast({ title: "Image uploaded successfully!" });
       } else {
         toast({

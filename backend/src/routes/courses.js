@@ -61,10 +61,10 @@ router.post('/',
     body('description').trim().notEmpty(),
     body('category').isIn(['Technical', 'Soft Skills', 'Leadership', 'Career Development', 'Personal Growth']),
     body('duration').trim().notEmpty(),
-    body('level').optional().isIn(['Beginner', 'Intermediate', 'Advanced']),
-    body('capacity').optional().isInt({ min: 0 }),
-    body('startDate').optional().isISO8601(),
-    body('endDate').optional().isISO8601()
+    body('level').optional({ values: 'falsy' }).isIn(['Beginner', 'Intermediate', 'Advanced']),
+    body('capacity').optional({ values: 'falsy' }).isInt({ min: 0 }),
+    body('startDate').optional({ values: 'falsy' }).isISO8601(),
+    body('endDate').optional({ values: 'falsy' }).isISO8601()
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -97,9 +97,9 @@ router.put('/:id',
     body('description').optional().trim().notEmpty(),
     body('category').optional().isIn(['Technical', 'Soft Skills', 'Leadership', 'Career Development', 'Personal Growth']),
     body('duration').optional().trim().notEmpty(),
-    body('level').optional().isIn(['Beginner', 'Intermediate', 'Advanced']),
-    body('capacity').optional().isInt({ min: 0 }),
-    body('status').optional().isIn(['upcoming', 'ongoing', 'completed', 'cancelled'])
+    body('level').optional({ values: 'falsy' }).isIn(['Beginner', 'Intermediate', 'Advanced']),
+    body('capacity').optional({ values: 'falsy' }).isInt({ min: 0 }),
+    body('status').optional({ values: 'falsy' }).isIn(['upcoming', 'ongoing', 'completed', 'cancelled'])
   ],
   async (req, res) => {
     const errors = validationResult(req);

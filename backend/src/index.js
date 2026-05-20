@@ -15,6 +15,7 @@ import mediaRoutes from './routes/media.js';
 import exportRoutes from './routes/export.js';
 import settingsRoutes from './routes/settings.js';
 import emailRoutes from './routes/email.js';
+import bodyMembersRoutes from './routes/bodyMembers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,6 +57,7 @@ app.use('/api/media', apiRateLimiter, mediaRoutes);
 app.use('/api/export', apiRateLimiter, exportRoutes);
 app.use('/api/settings', apiRateLimiter, settingsRoutes);
 app.use('/api/email', apiRateLimiter, emailRoutes);
+app.use('/api/body-members', apiRateLimiter, bodyMembersRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running', timestamp: new Date().toISOString() });

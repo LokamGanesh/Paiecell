@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Calendar, Users, FileDown, Mail, ExternalLink, LogOut, Menu, X, UserCog, BookOpen, Settings, Image, BarChart3, Loader, Edit } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, FileDown, Mail, ExternalLink, LogOut, Menu, X, UserCog, BookOpen, Settings, Image, BarChart3, Loader, Edit, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserManagement } from "@/components/UserManagement";
@@ -11,6 +11,7 @@ import { Analytics } from "@/components/Analytics";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { YesPlusSettingsDialog } from "@/components/YesPlusSettingsDialog";
 import { ExportRegistrations } from "@/components/ExportRegistrations";
+import { BodyMembersManagement } from "@/components/BodyMembersManagement";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +21,7 @@ const NAV = [
   { label: "Events", icon: Calendar, id: "events" },
   { label: "Courses", icon: BookOpen, id: "courses" },
   { label: "Media", icon: Image, id: "media" },
+  { label: "Body Members", icon: UserCheck, id: "body-members" },
   { label: "Registrations", icon: Users, id: "registrations" },
   { label: "User Management", icon: UserCog, id: "users" },
   { label: "YES+ Tracking", icon: ExternalLink, id: "tracking" },
@@ -206,7 +208,9 @@ const Admin = () => {
           <button className="md:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="font-display text-xl font-bold text-foreground capitalize">{activeTab}</h1>
+          <h1 className="font-display text-xl font-bold text-foreground capitalize">
+            {activeTab === "body-members" ? "Body Members" : activeTab}
+          </h1>
         </header>
 
         <main className="p-6">
@@ -444,6 +448,8 @@ const Admin = () => {
               </div>
             </div>
           )}
+
+          {activeTab === "body-members" && <BodyMembersManagement />}
         </main>
       </div>
       <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />

@@ -27,11 +27,10 @@ router.get('/cloudinary/:type', async (req, res) => {
 // Get all media
 router.get('/', async (req, res) => {
   try {
-    const media = await Media.find()
-      .populate('createdBy', 'name email')
-      .sort({ createdAt: -1 });
+    const media = await Media.find().sort({ createdAt: -1 }).lean();
     res.json({ media });
   } catch (error) {
+    console.error('Get media error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -43,10 +42,7 @@ router.get('/type/:type', async (req, res) => {
     if (!['event', 'course'].includes(type)) {
       return res.status(400).json({ error: 'Invalid type' });
     }
-
-    const media = await Media.find({ type })
-      .populate('createdBy', 'name email')
-      .sort({ createdAt: -1 });
+    const media = await Media.find({ type }).sort({ createdAt: -1 }).lean();
     res.json({ media });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -57,9 +53,7 @@ router.get('/type/:type', async (req, res) => {
 router.get('/item/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
-    const media = await Media.find({ itemId })
-      .populate('createdBy', 'name email')
-      .sort({ createdAt: -1 });
+    const media = await Media.find({ itemId }).sort({ createdAt: -1 }).lean();
     res.json({ media });
   } catch (error) {
     res.status(500).json({ error: error.message });

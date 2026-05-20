@@ -71,30 +71,23 @@ export const MediaManagement = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      
-      // Fetch completed events and courses
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Fetch ALL events and courses (not just completed)
       const [eventsRes, coursesRes, mediaRes] = await Promise.all([
-        fetch(`${API_URL}/events?status=completed`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${API_URL}/courses?status=completed`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        fetch(`${API_URL}/media`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        fetch(`${API_URL}/events`, { headers }),
+        fetch(`${API_URL}/courses`, { headers }),
+        fetch(`${API_URL}/media`, { headers })
       ]);
 
       if (eventsRes.ok) {
         const data = await eventsRes.json();
         setEvents(data.events || []);
       }
-
       if (coursesRes.ok) {
         const data = await coursesRes.json();
         setCourses(data.courses || []);
       }
-
       if (mediaRes.ok) {
         const data = await mediaRes.json();
         setMedia(data.media || []);
@@ -120,39 +113,38 @@ export const MediaManagement = () => {
   };
 
   const handleFileUpload = async (file: File) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast({ title: "Not authenticated", description: "Please login first", variant: "destructive" });
+      return;
+    }
+
     setUploadingFile(true);
     try {
       const formData = new FormData();
       formData.append('media', file);
-      formData.append('type', form.type); // 'event' or 'course' → maps to events/courses folder
+      formData.append('type', form.type);
 
-      const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/upload/media`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        setForm(prev => ({ ...prev, mediaUrl: data.mediaUrl, publicId: data.publicId }));
-        toast({ title: "Media uploaded to Cloudinary successfully!" });
+        setForm(prev => ({ ...prev, mediaUrl: data.mediaUrl, publicId: data.publicId || '' }));
+        toast({ title: "Uploaded to Cloudinary successfully!" });
       } else {
         toast({
-          title: "Failed to upload media",
-          description: data.error || "Something went wrong",
+          title: "Upload failed",
+          description: data.error || `Error ${res.status}`,
           variant: "destructive",
         });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to upload media",
-        variant: "destructive",
-      });
+      toast({ title: "Upload failed", description: "Network error", variant: "destructive" });
     } finally {
       setUploadingFile(false);
     }
@@ -481,7 +473,7 @@ export const MediaManagement = () => {
                         alt="Preview" 
                         className="w-full h-40 object-cover rounded-lg"
                         onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/400x200?text=Invalid+Image';
+                          e.currentTarget.style.display = 'none';
                         }}
                       />
                     ) : (

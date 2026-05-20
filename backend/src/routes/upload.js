@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { auth, adminAuth } from '../middleware/auth.js';
+import { auth, adminAuth, facilitatorAuth } from '../middleware/auth.js';
 import { uploadToCloudinary, deleteFromCloudinary, getPublicIdFromUrl } from '../utils/cloudinaryService.js';
 
 const router = express.Router();
@@ -28,15 +28,16 @@ const upload = multer({
   fileFilter
 });
 
-// Upload single image → Cloudinary paiecell/gallery/events or courses
-router.post('/image', auth, adminAuth, upload.single('image'), async (req, res) => {
+// Upload single image → Cloudinary paiecell/events/covers or paiecell/courses/covers
+router.post('/image', auth, facilitatorAuth, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     const type = req.body.type === 'course' ? 'courses' : 'events';
-    const result = await uploadToCloudinary(req.file.buffer, req.file.originalname, type);
+    const folder = `paiecell/${type}`;
+    const result = await uploadToCloudinary(req.file.buffer, req.file.originalname, type, folder);
 
     res.json({
       message: 'Image uploaded successfully',
@@ -47,12 +48,12 @@ router.post('/image', auth, adminAuth, upload.single('image'), async (req, res) 
     });
   } catch (error) {
     console.error('Image upload error:', error);
-    res.status(500).json({ error: 'Failed to upload image' });
+    res.status(500).json({ error: error.message || 'Failed to upload image' });
   }
 });
 
 // Upload media (image or video) → Cloudinary
-router.post('/media', auth, adminAuth, upload.single('media'), async (req, res) => {
+router.post('/media', auth, facilitatorAuth, upload.single('media'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -69,12 +70,12 @@ router.post('/media', auth, adminAuth, upload.single('media'), async (req, res) 
     });
   } catch (error) {
     console.error('Media upload error:', error);
-    res.status(500).json({ error: 'Failed to upload media' });
+    res.status(500).json({ error: error.message || 'Failed to upload media' });
   }
 });
 
 // Delete image/media from Cloudinary
-router.delete('/image/:publicId(*)', auth, adminAuth, async (req, res) => {
+router.delete('/image/:publicId(*)', auth, facilitatorAuth, async (req, res) => {
   try {
     const publicId = req.params.publicId;
     await deleteFromCloudinary(publicId);
@@ -86,7 +87,7 @@ router.delete('/image/:publicId(*)', auth, adminAuth, async (req, res) => {
 });
 
 // Delete by URL (extracts public_id automatically)
-router.delete('/by-url', auth, adminAuth, async (req, res) => {
+router.delete('/by-url', auth, facilitatorAuth, async (req, res) => {
   try {
     const { url, resourceType } = req.body;
     if (!url) return res.status(400).json({ error: 'URL is required' });

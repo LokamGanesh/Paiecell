@@ -106,6 +106,7 @@ export const CourseManagement = () => {
       instructor: "",
       level: "Beginner",
       image: "",
+      video: "",
       capacity: 0,
       status: "upcoming",
       startDate: "",
@@ -122,6 +123,7 @@ export const CourseManagement = () => {
     try {
       const formData = new FormData();
       formData.append('image', file);
+      formData.append('type', 'course');
 
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/upload/image`, {
@@ -135,8 +137,7 @@ export const CourseManagement = () => {
       const data = await res.json();
 
       if (res.ok) {
-        const imageUrl = `${API_URL.replace('/api', '')}${data.imageUrl}`;
-        setForm({ ...form, image: imageUrl });
+        setForm(prev => ({ ...prev, image: data.imageUrl }));
         toast({ title: "Image uploaded successfully!" });
       } else {
         toast({
@@ -183,6 +184,7 @@ export const CourseManagement = () => {
         instructor: course.instructor || "",
         level: course.level,
         image: course.image || "",
+        video: "",
         capacity: course.capacity,
         status: course.status,
         startDate: course.startDate ? course.startDate.split('T')[0] : "",
@@ -211,13 +213,17 @@ export const CourseManagement = () => {
         ? `${API_URL}/courses/${editingCourse._id}`
         : `${API_URL}/courses`;
       
+      const payload = { ...form };
+      if (!payload.startDate) delete payload.startDate;
+      if (!payload.endDate) delete payload.endDate;
+
       const res = await fetch(url, {
         method: editingCourse ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -230,9 +236,13 @@ export const CourseManagement = () => {
         resetForm();
         fetchCourses();
       } else {
+        const errorMsg = data.errors 
+          ? data.errors.map((e: any) => `${e.path}: ${e.msg}`).join(', ')
+          : data.error || "Something went wrong";
+        console.error('Course save errors:', data);
         toast({
           title: "Failed to save course",
-          description: data.error || "Something went wrong",
+          description: errorMsg,
           variant: "destructive",
         });
       }

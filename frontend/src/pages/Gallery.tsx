@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { X, ZoomIn } from "lucide-react";
@@ -23,6 +23,8 @@ const Gallery = () => {
   const [loading, setLoading] = useState(true);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [lightboxType, setLightboxType] = useState<'image' | 'video'>('image');
+  const [contentVisible, setContentVisible] = useState(true);
+  const switchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchCloudinaryMedia();
@@ -35,7 +37,6 @@ const Gallery = () => {
         fetch(`${API_URL}/media/cloudinary/events`),
         fetch(`${API_URL}/media/cloudinary/courses`)
       ]);
-
       if (eventsRes.ok) {
         const data = await eventsRes.json();
         setEventsMedia(data.resources || []);
@@ -51,6 +52,16 @@ const Gallery = () => {
     }
   };
 
+  const handleTabSwitch = (tab: 'events' | 'courses') => {
+    if (tab === activeTab) return;
+    if (switchTimeout.current) clearTimeout(switchTimeout.current);
+    setContentVisible(false);
+    switchTimeout.current = setTimeout(() => {
+      setActiveTab(tab);
+      setContentVisible(true);
+    }, 180);
+  };
+
   const currentMedia = activeTab === 'events' ? eventsMedia : coursesMedia;
   const images = currentMedia.filter(r => r.resourceType === 'image');
   const videos = currentMedia.filter(r => r.resourceType === 'video');
@@ -60,29 +71,28 @@ const Gallery = () => {
     setLightboxType(type);
   };
 
-  const closeLightbox = () => {
-    setLightboxUrl(null);
-  };
+  const closeLightbox = () => setLightboxUrl(null);
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="container pt-24 pb-20">
-        <h1 className="font-display text-4xl font-bold text-foreground mb-2 text-center">Gallery</h1>
-        <p className="text-muted-foreground mb-8 text-center">
-          Photos and videos from our events and courses
-        </p>
-
-        {/* Tab Toggle */}
-        <div className="flex justify-center mb-10">
-          <div className="inline-flex rounded-full border border-border bg-muted p-1 gap-1">
+      {/* Tab Toggle — just below navbar */}
+      <div className="bg-background border-b border-border pt-16">
+        <div className="flex justify-center py-3">
+          <div className="relative inline-flex rounded-full border border-border bg-muted p-1">
+            {/* Sliding pill */}
+            <span
+              className="absolute top-1 bottom-1 rounded-full bg-primary shadow transition-all duration-300 ease-in-out"
+              style={{
+                width: 'calc(50% - 2px)',
+                left: activeTab === 'events' ? '4px' : 'calc(50% + 2px)',
+              }}
+            />
             <button
-              onClick={() => setActiveTab('events')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                activeTab === 'events'
-                  ? 'bg-primary text-primary-foreground shadow'
-                  : 'text-muted-foreground hover:text-foreground'
+              onClick={() => handleTabSwitch('events')}
+              className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'events' ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Events
@@ -91,11 +101,9 @@ const Gallery = () => {
               )}
             </button>
             <button
-              onClick={() => setActiveTab('courses')}
-              className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                activeTab === 'courses'
-                  ? 'bg-primary text-primary-foreground shadow'
-                  : 'text-muted-foreground hover:text-foreground'
+              onClick={() => handleTabSwitch('courses')}
+              className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'courses' ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Courses
@@ -105,7 +113,10 @@ const Gallery = () => {
             </button>
           </div>
         </div>
+      </div>
 
+      {/* Content */}
+      <div className="container py-8">
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => (
@@ -113,13 +124,19 @@ const Gallery = () => {
             ))}
           </div>
         ) : currentMedia.length === 0 ? (
-          <div className="text-center py-20">
+          <div
+            className="text-center py-20 transition-all duration-200"
+            style={{ opacity: contentVisible ? 1 : 0, transform: contentVisible ? 'translateY(0)' : 'translateY(8px)' }}
+          >
             <p className="text-muted-foreground text-lg">
               No media found in {activeTab} gallery.
             </p>
           </div>
         ) : (
-          <>
+          <div
+            className="transition-all duration-200"
+            style={{ opacity: contentVisible ? 1 : 0, transform: contentVisible ? 'translateY(0)' : 'translateY(8px)' }}
+          >
             {/* Videos Section */}
             {videos.length > 0 && (
               <div className="mb-12">
@@ -182,7 +199,7 @@ const Gallery = () => {
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
