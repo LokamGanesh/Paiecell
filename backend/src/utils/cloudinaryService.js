@@ -30,55 +30,31 @@ export const uploadToCloudinary = (fileBuffer, originalName, type = 'events') =>
 };
 
 // Fetch all resources from a Cloudinary folder (events or courses)
+// Uses Search API which works with both legacy and fixed folder modes
 export const fetchFromCloudinaryFolder = async (type = 'events') => {
   const folder = `paiecell/gallery/${type}`;
-  const resources = [];
-  let nextCursor = null;
 
-  do {
-    const options = {
-      type: 'upload',
-      prefix: folder,
-      max_results: 100,
-      resource_type: 'image'
-    };
-    if (nextCursor) options.next_cursor = nextCursor;
+  try {
+    const result = await cloudinary.search
+      .expression(`folder:${folder}`)
+      .sort_by('created_at', 'desc')
+      .max_results(100)
+      .execute();
 
-    const result = await cloudinary.api.resources(options);
-    resources.push(...result.resources);
-    nextCursor = result.next_cursor || null;
-  } while (nextCursor);
-
-  // Also fetch videos
-  let nextVideoCursor = null;
-  do {
-    const options = {
-      type: 'upload',
-      prefix: folder,
-      max_results: 100,
-      resource_type: 'video'
-    };
-    if (nextVideoCursor) options.next_cursor = nextVideoCursor;
-
-    try {
-      const result = await cloudinary.api.resources(options);
-      resources.push(...result.resources);
-      nextVideoCursor = result.next_cursor || null;
-    } catch {
-      nextVideoCursor = null;
-    }
-  } while (nextVideoCursor);
-
-  return resources.map(r => ({
-    publicId: r.public_id,
-    url: r.secure_url,
-    resourceType: r.resource_type,
-    format: r.format,
-    width: r.width,
-    height: r.height,
-    createdAt: r.created_at,
-    displayName: r.public_id.split('/').pop().replace(/[-_]/g, ' ')
-  }));
+    return (result.resources || []).map(r => ({
+      publicId: r.public_id,
+      url: r.secure_url,
+      resourceType: r.resource_type,
+      format: r.format,
+      width: r.width,
+      height: r.height,
+      createdAt: r.created_at,
+      displayName: (r.display_name || r.filename || r.public_id.split('/').pop()).replace(/[-_]/g, ' ')
+    }));
+  } catch (error) {
+    console.error('Cloudinary search error:', error);
+    throw error;
+  }
 };
 
 // Delete a file from Cloudinary by public_id
