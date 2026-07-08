@@ -76,6 +76,7 @@ export const BulkEmail = () => {
     subject: "",
     message: "",
     userType: "all",
+    itemId: "",
   });
 
   // Manual user selection state
@@ -130,7 +131,7 @@ export const BulkEmail = () => {
   const closeDialog = () => {
     setDialog(null);
     setReminderForm({ reminderType: "event", itemId: "", userType: "all", customMessage: "" });
-    setCustomForm({ subject: "", message: "", userType: "all" });
+    setCustomForm({ subject: "", message: "", userType: "all", itemId: "" });
     setSelectedUserIds([]);
     setUserSearch("");
   };
@@ -139,7 +140,7 @@ export const BulkEmail = () => {
     if (isReminder) {
       setReminderForm((f) => ({ ...f, userType: value, itemId: "" }));
     } else {
-      setCustomForm((f) => ({ ...f, userType: value }));
+      setCustomForm((f) => ({ ...f, userType: value, itemId: "" }));
     }
     if (value === "custom") fetchAllUsers();
   };
@@ -200,7 +201,7 @@ export const BulkEmail = () => {
 
   // ── Send custom email ──────────────────────────────────────────────────────
   const handleSendCustom = async () => {
-    const { subject, message, userType } = customForm;
+    const { subject, message, userType, itemId } = customForm;
 
     if (!subject.trim()) {
       toast({ title: "Please enter a subject", variant: "destructive" });
@@ -208,6 +209,10 @@ export const BulkEmail = () => {
     }
     if (!message.trim()) {
       toast({ title: "Please enter a message", variant: "destructive" });
+      return;
+    }
+    if ((userType === "event" || userType === "course") && !itemId) {
+      toast({ title: "Please select an event or course", variant: "destructive" });
       return;
     }
     if (userType === "custom" && selectedUserIds.length === 0) {
@@ -218,6 +223,7 @@ export const BulkEmail = () => {
     setSending(true);
     try {
       const body: any = { subject, message, userType };
+      if (itemId) body.itemId = itemId;
       if (userType === "custom") body.userIds = selectedUserIds;
 
       const res = await fetch(`${API_URL}/email/send-custom`, {
@@ -459,6 +465,33 @@ export const BulkEmail = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Event / Course picker */}
+            {(customForm.userType === "event" || customForm.userType === "course") && (
+              <div>
+                <Label>
+                  {customForm.userType === "event" ? "Select Event" : "Select Course"}
+                </Label>
+                <Select
+                  value={customForm.itemId}
+                  onValueChange={(v) => setCustomForm((f) => ({ ...f, itemId: v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
+                  <SelectContent>
+                    {(customForm.userType === "event" ? events : courses).map((item) => (
+                      <SelectItem key={item._id} value={item._id}>
+                        {item.title}
+                        {"date" in item && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {new Date((item as EventItem).date).toLocaleDateString()}
+                          </span>
+                        )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Manual user picker */}
             {customForm.userType === "custom" && <UserPicker />}
