@@ -12,7 +12,7 @@ import BodyMembersSection from "@/components/BodyMembersSection";
 const stats = [
   { icon: Users, label: "Students Empowered", value: "2,000+" },
   { icon: Calendar, label: "Events Conducted", value: "150+" },
-  { icon: Sparkles, label: "Programs Offered", value: "6" },
+  { icon: Sparkles, label: "Programs Offered", value: "10" },
 ];
 
 const Index = () => {

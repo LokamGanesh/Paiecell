@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { Calendar, MapPin, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { LoginDialog } from "@/components/LoginDialog";
 
 const CATEGORY_COLORS: Record<string, string> = {
   Workshop: "bg-blue-500",
@@ -16,9 +19,11 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Personal Growth": "bg-violet-500",
 };
 
-const EventCard = ({ event }: { event: any }) => {
+const EventCard = ({ event, type = "event" }: { event: any; type?: "event" | "course" }) => {
   const isPast = new Date(event.date) < new Date();
   const isMultiDay = event.endDate && event.endDate !== event.date;
+  const { user } = useAuth();
+  const [showLogin, setShowLogin] = useState(false);
   
   const formatDateRange = () => {
     const startDate = new Date(event.date);
@@ -55,6 +60,7 @@ const EventCard = ({ event }: { event: any }) => {
   };
 
   return (
+    <>
     <div className="group rounded-xl border border-border bg-card card-shadow hover:card-hover-shadow transition-all duration-300 overflow-hidden flex flex-col">
       {event.image && (
         <div className="w-full h-48 overflow-hidden">
@@ -113,13 +119,22 @@ const EventCard = ({ event }: { event: any }) => {
               </Button>
             </a>
           ) : (
-            <Link to={`/register?event=${event._id}`}>
-              <Button className="w-full">Register Now</Button>
-            </Link>
+            user ? (
+              <Link to={`/register?${type === "course" ? "course" : "event"}=${event._id}`}>
+                <Button className="w-full">Register Now</Button>
+              </Link>
+            ) : (
+              <Button className="w-full" onClick={() => setShowLogin(true)}>
+                Register Now
+              </Button>
+            )
           )
         )}
       </div>
     </div>
+
+    <LoginDialog open={showLogin} onOpenChange={setShowLogin} />
+    </>
   );
 };
 

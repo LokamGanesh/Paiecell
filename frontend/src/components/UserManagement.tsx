@@ -26,12 +26,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Eye, EyeOff, UserPlus, Trash2, Edit } from "lucide-react";
+import { Eye, EyeOff, UserPlus, Trash2 } from "lucide-react";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 interface User {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   phone: string;
@@ -145,6 +145,10 @@ export const UserManagement = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
+    if (!userId) {
+      toast({ title: "Invalid user ID", variant: "destructive" });
+      return;
+    }
     if (!confirm("Are you sure you want to delete this user?")) return;
 
     try {
@@ -154,11 +158,17 @@ export const UserManagement = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      const data = await res.json();
+
       if (res.ok) {
         toast({ title: "User deleted successfully" });
-        fetchUsers();
+        setUsers((prev) => prev.filter((u) => u._id !== userId));
       } else {
-        toast({ title: "Failed to delete user", variant: "destructive" });
+        toast({
+          title: "Failed to delete user",
+          description: data.error || "Something went wrong",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       toast({ title: "Error deleting user", variant: "destructive" });
@@ -219,20 +229,20 @@ export const UserManagement = () => {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
+              <TableRow key="loading">
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   Loading users...
                 </TableCell>
               </TableRow>
             ) : filteredUsers.length === 0 ? (
-              <TableRow>
+              <TableRow key="empty">
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
             ) : (
               filteredUsers.map((user) => (
-                <TableRow key={user.id}>
+                <TableRow key={user._id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.phone}</TableCell>
@@ -249,7 +259,7 @@ export const UserManagement = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
+                        onClick={() => handleDeleteUser(user._id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -15,7 +15,7 @@ interface ProfileDialogProps {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -122,6 +122,11 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
         description: "Your profile has been updated successfully.",
       });
 
+      // Update user state in context immediately with returned data
+      if (data.user) {
+        updateUser(data.user);
+      }
+
       // If password was changed, logout and ask to login again
       if (form.currentPassword && form.newPassword) {
         toast({
@@ -133,8 +138,7 @@ export const ProfileDialog = ({ open, onOpenChange }: ProfileDialogProps) => {
           onOpenChange(false);
         }, 1500);
       } else {
-        // Refresh the page to update user data
-        window.location.reload();
+        onOpenChange(false);
       }
     } catch (error) {
       toast({

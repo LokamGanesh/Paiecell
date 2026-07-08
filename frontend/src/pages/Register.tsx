@@ -9,18 +9,24 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { eventsApi, registrationsApi } from "@/lib/api";
+import { eventsApi, coursesApi, registrationsApi } from "@/lib/api";
 
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
 
 const Register = () => {
   const [searchParams] = useSearchParams();
-  const preselectedEvent = searchParams.get("event") || "";
+  const preselectedEventId = searchParams.get("event") || "";
+  const preselectedCourseId = searchParams.get("course") || "";
+  const preselectedId = preselectedEventId || preselectedCourseId;
+  const preselectedType: "event" | "course" = preselectedCourseId ? "course" : "event";
+
   const { toast } = useToast();
   const { user } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [preselectedTitle, setPreselectedTitle] = useState<string>("");
 
   const [form, setForm] = useState({
     name: "",
@@ -31,28 +37,44 @@ const Register = () => {
     college: "SRKR Engineering College",
     department: "",
     year: "",
-    eventId: preselectedEvent,
+    itemId: preselectedId,
+    type: preselectedType,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // If coming from a specific event/course link, fetch its title
   useEffect(() => {
-    const fetchEvents = async () => {
+    if (preselectedEventId) {
+      eventsApi.getById(preselectedEventId)
+        .then((data) => setPreselectedTitle(data.event?.title || data.title || ""))
+        .catch(() => {});
+    } else if (preselectedCourseId) {
+      coursesApi.getById(preselectedCourseId)
+        .then((data) => setPreselectedTitle(data.course?.title || data.title || ""))
+        .catch(() => {});
+    }
+  }, [preselectedEventId, preselectedCourseId]);
+
+  // Only fetch lists when there is no preselected item (manual selection)
+  useEffect(() => {
+    if (preselectedId) return;
+    const fetchAll = async () => {
       try {
-        const data = await eventsApi.getAll();
-        const upcoming = (data.events || []).filter((e: any) => 
+        const [evData, crData] = await Promise.all([eventsApi.getAll(), coursesApi.getAll()]);
+        const upcomingEvents = (evData.events || []).filter((e: any) =>
           !e.isExternal && new Date(e.date) >= new Date()
         );
-        setEvents(upcoming);
+        setEvents(upcomingEvents);
+        setCourses(crData.courses || []);
       } catch (error) {
-        console.error('Failed to fetch events:', error);
+        console.error("Failed to fetch events/courses:", error);
       }
     };
-    fetchEvents();
-  }, []);
+    fetchAll();
+  }, [preselectedId]);
 
   useEffect(() => {
-    // Autofill form if user is logged in
     if (user) {
       setForm(prev => ({
         ...prev,
@@ -68,7 +90,7 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.phone || !form.college || !form.department || !form.year || !form.eventId) {
+    if (!form.name || !form.email || !form.phone || !form.college || !form.department || !form.year || !form.itemId) {
       toast({ title: "Please fill all fields", variant: "destructive" });
       return;
     }
@@ -84,30 +106,29 @@ const Register = () => {
       toast({ title: "Password must be at least 6 characters", variant: "destructive" });
       return;
     }
-    
+
     setLoading(true);
     try {
       if (user) {
-        // If logged in, use the registration API
-        await registrationsApi.create({
-          eventId: form.eventId,
-          type: 'event'
-        });
+        await registrationsApi.create(
+          form.type === "course"
+            ? { courseId: form.itemId, type: "course" }
+            : { eventId: form.itemId, type: "event" }
+        );
       } else {
-        // For non-logged in users, just simulate (you can add a guest registration endpoint later)
         await new Promise((r) => setTimeout(r, 1200));
       }
-      
+
       setSubmitted(true);
-      toast({ 
+      toast({
         title: "Registration successful!",
-        description: "You have been registered for the event."
+        description: `You have been registered for the ${form.type}.`,
       });
     } catch (error) {
       toast({
         title: "Registration failed",
         description: error instanceof Error ? error.message : "Please try again",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -137,7 +158,9 @@ const Register = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container pt-24 pb-20 max-w-lg">
-        <h1 className="font-display text-3xl font-bold text-foreground mb-2">Register for an Event</h1>
+        <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+          Register for {preselectedType === "course" ? "a Course" : "an Event"}
+        </h1>
         <p className="text-muted-foreground mb-8">Fill in your details to secure your spot</p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -254,17 +277,52 @@ const Register = () => {
             </Select>
             {user && <p className="text-xs text-muted-foreground mt-1">Autofilled from your profile</p>}
           </div>
-          <div>
-            <Label>Event *</Label>
-            <Select value={form.eventId} onValueChange={(v) => setForm({ ...form, eventId: v })}>
-              <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
-              <SelectContent>
-                {events.map((ev) => (
-                  <SelectItem key={ev._id} value={ev._id}>{ev.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+
+          {/* Event / Course field */}
+          {preselectedId ? (
+            /* Came from a specific event/course card — show read-only */
+            <div>
+              <Label>{preselectedType === "course" ? "Course" : "Event"}</Label>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-muted/50 text-sm text-foreground">
+                {preselectedTitle || "Loading…"}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Pre-selected from the {preselectedType} page
+              </p>
+            </div>
+          ) : (
+            /* Manual selection — show combined event + course picker */
+            <div>
+              <Label>Event / Course *</Label>
+              <Select
+                value={form.itemId}
+                onValueChange={(v) => {
+                  const isEvent = events.some((e) => e._id === v);
+                  setForm({ ...form, itemId: v, type: isEvent ? "event" : "course" });
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Select event or course" /></SelectTrigger>
+                <SelectContent>
+                  {events.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Events</div>
+                      {events.map((ev) => (
+                        <SelectItem key={ev._id} value={ev._id}>{ev.title}</SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {courses.length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-1">Courses</div>
+                      {courses.map((cr) => (
+                        <SelectItem key={cr._id} value={cr._id}>{cr.title}</SelectItem>
+                      ))}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <Button type="submit" className="w-full" size="lg" disabled={loading}>
             {loading ? "Registering..." : "Register Now"}

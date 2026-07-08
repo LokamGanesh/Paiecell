@@ -25,18 +25,6 @@ const socials = [
     icon: Youtube,
     display: "PAIE Cell",
   },
-  {
-    label: "Facebook",
-    href: "https://www.facebook.com/paiecell",
-    icon: Facebook,
-    display: "PAIE Cell",
-  },
-  {
-    label: "Twitter / X",
-    href: "https://twitter.com/paie_cell",
-    icon: Twitter,
-    display: "@paie_cell",
-  },
 ];
 
 const Footer = () => (

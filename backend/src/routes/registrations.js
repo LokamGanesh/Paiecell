@@ -4,6 +4,7 @@ import Registration from '../models/Registration.js';
 import Event from '../models/Event.js';
 import Course from '../models/Course.js';
 import { auth, adminAuth } from '../middleware/auth.js';
+import { sendEmail, getEventRegistrationConfirmationTemplate, getCourseRegistrationConfirmationTemplate } from '../utils/emailService.js';
 
 const router = express.Router();
 
@@ -104,9 +105,27 @@ router.post('/',
       // Populate only necessary fields
       await registration.populate([
         { path: 'user', select: 'name email phone' },
-        { path: 'event', select: 'title date venue' },
-        { path: 'course', select: 'title duration' }
+        { path: 'event', select: 'title date time venue category' },
+        { path: 'course', select: 'title duration level venue category' }
       ]);
+
+      // Send confirmation email (fire-and-forget — don't block the response)
+      try {
+        const userName = req.user.name;
+        const userEmail = req.user.email;
+
+        if (type === 'event' && registration.event) {
+          const html = getEventRegistrationConfirmationTemplate(userName, registration.event);
+          sendEmail(userEmail, `Registration Confirmed: ${registration.event.title}`, html)
+            .catch(err => console.error('Event confirmation email failed:', err));
+        } else if (type === 'course' && registration.course) {
+          const html = getCourseRegistrationConfirmationTemplate(userName, registration.course);
+          sendEmail(userEmail, `Enrollment Confirmed: ${registration.course.title}`, html)
+            .catch(err => console.error('Course confirmation email failed:', err));
+        }
+      } catch (emailErr) {
+        console.error('Failed to initiate confirmation email:', emailErr);
+      }
 
       res.status(201).json({ 
         message: 'Registration successful',

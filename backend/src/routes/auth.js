@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/User.js';
 import { auth } from '../middleware/auth.js';
-import { sendEmail } from '../utils/emailService.js';
+import { sendEmail, getOTPEmailTemplate, getWelcomeEmailTemplate } from '../utils/emailService.js';
 import { initiatePayment, verifyPayment } from '../utils/phonePeService.js';
 
 const router = express.Router();
@@ -199,18 +199,10 @@ router.post('/forgot-password',
       await user.save();
 
       // Send OTP via email
-      const emailTemplate = `
-        <h2>Password Reset OTP</h2>
-        <p>Hi ${user.name},</p>
-        <p>Your OTP for password reset is:</p>
-        <h1 style="color: #007bff; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
-        <p>This OTP will expire in 10 minutes.</p>
-        <p>If you didn't request this, please ignore this email.</p>
-        <p>Best regards,<br/>PAIE Cell</p>
-      `;
+      const emailTemplate = getOTPEmailTemplate(user.name, otp);
 
       try {
-        await sendEmail(email, 'Password Reset OTP', emailTemplate);
+        await sendEmail(email, 'Password Reset OTP - PAIE Cell', emailTemplate);
         console.log(`OTP sent successfully to ${email}`);
       } catch (emailError) {
         console.error('Failed to send OTP email:', emailError);
@@ -350,18 +342,10 @@ router.post('/resend-otp',
       await user.save();
 
       // Send OTP via email
-      const emailTemplate = `
-        <h2>Password Reset OTP</h2>
-        <p>Hi ${user.name},</p>
-        <p>Your new OTP for password reset is:</p>
-        <h1 style="color: #007bff; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
-        <p>This OTP will expire in 10 minutes.</p>
-        <p>If you didn't request this, please ignore this email.</p>
-        <p>Best regards,<br/>PAIE Cell</p>
-      `;
+      const emailTemplate = getOTPEmailTemplate(user.name, otp);
 
       try {
-        await sendEmail(email, 'Password Reset OTP', emailTemplate);
+        await sendEmail(email, 'Password Reset OTP - PAIE Cell', emailTemplate);
         console.log(`OTP resent successfully to ${email}`);
       } catch (emailError) {
         console.error('Failed to send OTP email:', emailError);
@@ -440,14 +424,7 @@ router.post('/payment-callback', async (req, res) => {
       const token = generateToken(newUser._id);
 
       // Send welcome email
-      const emailTemplate = `
-        <h2>Welcome to PAIE Cell!</h2>
-        <p>Hi ${newUser.name},</p>
-        <p>Your registration has been completed successfully!</p>
-        <p><strong>Transaction ID:</strong> ${merchantTransactionId}</p>
-        <p>You can now login to your account and explore all the amazing events and courses.</p>
-        <p>Best regards,<br/>PAIE Cell Team</p>
-      `;
+      const emailTemplate = getWelcomeEmailTemplate(newUser.name, merchantTransactionId);
 
       try {
         await sendEmail(newUser.email, 'Registration Successful - Welcome to PAIE Cell', emailTemplate);

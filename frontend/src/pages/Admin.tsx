@@ -11,8 +11,10 @@ import { Analytics } from "@/components/Analytics";
 import { ProfileDialog } from "@/components/ProfileDialog";
 import { YesPlusSettingsDialog } from "@/components/YesPlusSettingsDialog";
 import { ExportRegistrations } from "@/components/ExportRegistrations";
+import { BulkEmail } from "@/components/BulkEmail";
 import { BodyMembersManagement } from "@/components/BodyMembersManagement";
 import { useAuth } from "@/contexts/AuthContext";
+
 import { useToast } from "@/hooks/use-toast";
 
 const NAV = [
@@ -437,17 +439,7 @@ const Admin = () => {
             </div>
           )}
 
-          {activeTab === "email" && (
-            <div className="bg-card rounded-xl border border-border p-6 text-center">
-              <Mail className="h-12 w-12 text-primary mx-auto mb-4" />
-              <h3 className="font-display font-semibold text-card-foreground mb-2">Bulk Email</h3>
-              <p className="text-muted-foreground mb-6">Send notifications and reminders to registered participants</p>
-              <div className="flex gap-3 justify-center">
-                <Button variant="outline">Send Reminder</Button>
-                <Button>Send Custom Email</Button>
-              </div>
-            </div>
-          )}
+          {activeTab === "email" && <BulkEmail />}
 
           {activeTab === "body-members" && <BodyMembersManagement />}
         </main>

@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { auth, adminAuth } from '../middleware/auth.js';
 
@@ -158,6 +159,11 @@ router.post('/',
 // Delete user (admin only)
 router.delete('/:id', auth, adminAuth, async (req, res) => {
   try {
+    // Validate ObjectId format before querying
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
     const user = await User.findById(req.params.id);
     
     if (!user) {
@@ -172,6 +178,7 @@ router.delete('/:id', auth, adminAuth, async (req, res) => {
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
+    console.error('Delete user error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
